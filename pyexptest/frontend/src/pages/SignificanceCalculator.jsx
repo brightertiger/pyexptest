@@ -2,6 +2,7 @@ import { useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import TestTypeSelector from '../components/TestTypeSelector'
 import FormField from '../components/FormField'
+import { CIComparisonChart, DistributionChart } from '../components/charts'
 
 function SignificanceCalculator() {
   const [testType, setTestType] = useState('conversion')
@@ -159,7 +160,7 @@ function SignificanceCalculator() {
 
       <div className="card">
         <div className="card-title">What are you measuring?</div>
-        <TestTypeSelector value={testType} onChange={setTestType} />
+        <TestTypeSelector value={testType} onChange={(val) => { setTestType(val); setResult(null); setError(null); }} />
       </div>
 
       <div className="card">
@@ -489,6 +490,26 @@ function SignificanceCalculator() {
               <div className="result-value">{result.confidence}%</div>
             </div>
           </div>
+
+          <CIComparisonChart
+            controlValue={testType === 'conversion' ? result.control_rate : result.control_mean}
+            variantValue={testType === 'conversion' ? result.variant_rate : result.variant_mean}
+            controlCI={result.control_ci}
+            variantCI={result.variant_ci}
+            label={testType === 'conversion' ? 'Conversion Rate' : 'Average Value'}
+            formatValue={(v) => testType === 'conversion' ? `${(v * 100).toFixed(2)}%` : `$${v.toFixed(2)}`}
+            isConversion={testType === 'conversion'}
+          />
+
+          <DistributionChart
+            controlMean={testType === 'conversion' ? result.control_rate : result.control_mean}
+            variantMean={testType === 'conversion' ? result.variant_rate : result.variant_mean}
+            controlStd={testType === 'conversion' ? null : formData.control_std}
+            variantStd={testType === 'conversion' ? null : formData.variant_std}
+            controlN={formData.control_visitors}
+            variantN={formData.variant_visitors}
+            isConversion={testType === 'conversion'}
+          />
 
           <div className="stats-explanation">
             <div className="stats-card">

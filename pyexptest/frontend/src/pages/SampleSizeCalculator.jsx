@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import TestTypeSelector from '../components/TestTypeSelector'
 import FormField from '../components/FormField'
+import { EffectSizeBar, PowerCurveChart } from '../components/charts'
 
 const CONFIDENCE_OPTIONS = [
   { value: 90, label: '90%', description: 'Lower bar for significance, faster tests, higher false positive risk (10%)' },
@@ -113,7 +114,7 @@ function SampleSizeCalculator() {
 
       <div className="card">
         <div className="card-title">What are you measuring?</div>
-        <TestTypeSelector value={testType} onChange={setTestType} />
+        <TestTypeSelector value={testType} onChange={(val) => { setTestType(val); setResult(null); setError(null); }} />
       </div>
 
       <form onSubmit={handleSubmit}>
@@ -321,6 +322,21 @@ function SampleSizeCalculator() {
               </div>
             </div>
           </div>
+
+          <EffectSizeBar
+            baseline={testType === 'conversion' ? result.current_rate * 100 : result.current_mean}
+            mde={result.lift_percent}
+            expectedValue={testType === 'conversion' ? result.expected_rate * 100 : result.expected_mean}
+            label={testType === 'conversion' ? 'Conversion Rate' : 'Average Value'}
+            formatValue={(v) => testType === 'conversion' ? `${v.toFixed(2)}%` : `$${v.toFixed(2)}`}
+          />
+
+          <PowerCurveChart
+            requiredN={result.visitors_per_variant}
+            power={result.power}
+            mde={result.lift_percent}
+            baseline={testType === 'conversion' ? result.current_rate : result.current_mean}
+          />
 
           <div className="stats-explanation">
             <div className="stats-card">

@@ -1022,3 +1022,514 @@ body {
   font-weight: 600;
   margin-left: auto;
 }
+
+/* Chart Components */
+.chart-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 12px;
+}
+
+.chart-tooltip {
+  background: var(--text-primary);
+  color: white;
+  padding: 8px 12px;
+  border-radius: var(--radius);
+  font-size: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.tooltip-label {
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.tooltip-value {
+  font-family: var(--font-mono);
+}
+
+.tooltip-ci {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.7);
+  margin-top: 4px;
+}
+
+.chart-legend {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  margin-top: 12px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legend-color {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+}
+
+.legend-color.control {
+  background: var(--pastel-blue-bg);
+  border: 1px solid var(--pastel-blue-text);
+}
+
+.legend-color.variant {
+  background: var(--pastel-green-bg);
+  border: 1px solid var(--pastel-green-text);
+}
+
+.legend-color.counterfactual {
+  background: var(--pastel-yellow-bg);
+  border: 1px solid var(--pastel-yellow-text);
+}
+
+.legend-color.gray-area {
+  background: var(--pastel-yellow-bg);
+  border: 1px solid var(--pastel-yellow-text);
+}
+
+.legend-color.expected-marker {
+  background: var(--pastel-green-text);
+  border-radius: 50%;
+}
+
+.legend-line {
+  width: 20px;
+  height: 2px;
+}
+
+.legend-line.dashed {
+  background: repeating-linear-gradient(
+    to right,
+    var(--pastel-blue-text),
+    var(--pastel-blue-text) 4px,
+    transparent 4px,
+    transparent 8px
+  );
+}
+
+.legend-line.error-bar {
+  background: var(--text-muted);
+  position: relative;
+}
+
+.legend-line.error-bar::before,
+.legend-line.error-bar::after {
+  content: '';
+  position: absolute;
+  width: 2px;
+  height: 8px;
+  background: var(--text-muted);
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.legend-line.error-bar::before {
+  left: 0;
+}
+
+.legend-line.error-bar::after {
+  right: 0;
+}
+
+.legend-line.solid {
+  background: currentColor;
+}
+
+.legend-line.solid.purple {
+  background: var(--pastel-purple-text);
+}
+
+.legend-line.dashed.green {
+  background: repeating-linear-gradient(
+    to right,
+    var(--pastel-green-text),
+    var(--pastel-green-text) 4px,
+    transparent 4px,
+    transparent 8px
+  );
+}
+
+.legend-line.dashed.blue {
+  background: repeating-linear-gradient(
+    to right,
+    var(--pastel-blue-text),
+    var(--pastel-blue-text) 4px,
+    transparent 4px,
+    transparent 8px
+  );
+}
+
+/* Effect Size Bar - New Design */
+.effect-size-container {
+  background: var(--bg-secondary);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.effect-size-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.effect-size-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.effect-size-legend-inline {
+  display: flex;
+  gap: 8px;
+}
+
+.legend-chip {
+  font-size: 10px;
+  font-weight: 500;
+  padding: 3px 8px;
+  border-radius: 10px;
+}
+
+.legend-chip.gray-area {
+  background: var(--pastel-yellow);
+  color: var(--pastel-yellow-text);
+}
+
+.legend-chip.target {
+  background: var(--pastel-green);
+  color: var(--pastel-green-text);
+}
+
+.effect-size-track {
+  position: relative;
+  height: 80px;
+  margin-bottom: 8px;
+}
+
+.track-background {
+  position: absolute;
+  top: 28px;
+  left: 0;
+  right: 0;
+  height: 8px;
+  background: var(--bg-hover);
+  border-radius: 4px;
+}
+
+.gray-area-fill {
+  position: absolute;
+  top: 24px;
+  height: 16px;
+  background: linear-gradient(90deg, 
+    rgba(253, 236, 200, 0.4) 0%, 
+    rgba(253, 236, 200, 0.9) 50%, 
+    rgba(253, 236, 200, 0.4) 100%
+  );
+  border: 1px solid var(--pastel-yellow-text);
+  border-radius: 4px;
+  opacity: 0.8;
+}
+
+.baseline-marker {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.baseline-marker .marker-line {
+  width: 2px;
+  height: 64px;
+  background: var(--text-secondary);
+  border-radius: 1px;
+}
+
+.baseline-marker .marker-label {
+  margin-top: 4px;
+  text-align: center;
+}
+
+.baseline-marker .marker-value {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.baseline-marker .marker-name {
+  display: block;
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.bound-marker {
+  position: absolute;
+  top: 44px;
+  transform: translateX(-50%);
+}
+
+.bound-marker .bound-label {
+  text-align: center;
+}
+
+.bound-marker .bound-value {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--pastel-yellow-text);
+}
+
+.bound-marker .bound-name {
+  display: block;
+  font-size: 9px;
+  color: var(--text-muted);
+}
+
+.target-marker {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.target-marker .target-dot {
+  width: 12px;
+  height: 12px;
+  background: var(--pastel-green-text);
+  border: 2px solid white;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  margin-top: 26px;
+}
+
+.target-marker .target-label {
+  margin-top: 30px;
+  text-align: center;
+}
+
+.target-marker .target-value {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--pastel-green-text);
+}
+
+.target-marker .target-name {
+  display: block;
+  font-size: 10px;
+  color: var(--pastel-green-text);
+}
+
+/* CI Comparison Chart */
+.ci-comparison-container {
+  background: var(--bg-secondary);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+/* Distribution Chart */
+.distribution-container {
+  background: var(--bg-secondary);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+/* Rate Comparison Chart */
+.rate-comparison-container {
+  background: var(--bg-secondary);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.rate-change-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.rate-change {
+  font-family: var(--font-mono);
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.rate-change.decrease {
+  color: var(--pastel-green-text);
+}
+
+.rate-change.increase {
+  color: var(--pastel-red-text);
+}
+
+.rate-change-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+/* Diff-in-Diff Chart */
+.did-chart-container {
+  background: var(--bg-secondary);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.did-explanation {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.did-arrows {
+  display: flex;
+  justify-content: center;
+  gap: 32px;
+}
+
+.did-arrow {
+  text-align: center;
+}
+
+.did-arrow .arrow-label {
+  display: block;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.did-arrow .arrow-value {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.did-arrow.control .arrow-value {
+  color: var(--pastel-blue-text);
+}
+
+.did-arrow.treatment .arrow-value {
+  color: var(--pastel-green-text);
+}
+
+.did-arrow.effect .arrow-value.highlight {
+  color: var(--pastel-purple-text);
+  font-size: 20px;
+}
+
+/* Power Curve Chart */
+.power-curve-container {
+  background: var(--bg-secondary);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+/* Chart CSS variables for Recharts */
+:root {
+  --pastel-blue-bg: #d3e5ef;
+  --pastel-green-bg: #dbeddb;
+  --pastel-yellow-bg: #fdecc8;
+  --pastel-red-bg: #ffe2dd;
+  --pastel-purple-bg: #e8deee;
+  --border-color: rgba(55, 53, 47, 0.09);
+}
+
+/* Survival Plot */
+.survival-plot-container {
+  background: var(--bg-secondary);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.survival-metrics {
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.survival-metric {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.metric-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.metric-dot.control {
+  background: var(--pastel-blue-text);
+}
+
+.metric-dot.treatment {
+  background: var(--pastel-green-text);
+}
+
+.survival-metric .metric-label {
+  color: var(--text-secondary);
+}
+
+.survival-metric .metric-value {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* Responsive chart adjustments */
+@media (max-width: 768px) {
+  .effect-size-legend,
+  .chart-legend {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  
+  .did-arrows {
+    flex-direction: column;
+    gap: 16px;
+  }
+  
+  .survival-metrics {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+}

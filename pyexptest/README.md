@@ -116,6 +116,8 @@ print(f"Best: {result.best_variant}")
 print(f"P-value: {result.p_value:.4f}")
 ```
 
+**Note:** Variant names must be unique. Duplicate names will raise a `ValueError`.
+
 ### Difference-in-Differences
 
 ```python
@@ -181,6 +183,8 @@ result = magnitude.analyze_multi(
 print(f"Best: {result.best_variant}")
 print(f"F-statistic: {result.f_statistic:.2f}")
 ```
+
+**Note:** Variant names must be unique. Duplicate names will raise a `ValueError`.
 
 ### Difference-in-Differences
 
@@ -307,6 +311,20 @@ pyexptest includes a beautiful web UI for interactive analysis:
 ```bash
 pyexptest-server
 # Open http://localhost:8000
+```
+
+### Configuration
+
+Configure the API server using environment variables:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `CORS_ORIGINS` | `http://localhost:3000,http://localhost:5173` | Comma-separated allowed origins |
+
+For production, set appropriate CORS origins:
+
+```bash
+CORS_ORIGINS="https://yourdomain.com" pyexptest-server
 ```
 
 ### Features

@@ -4,6 +4,8 @@ from pyexptest.utils.validation import (
     validate_alpha,
     validate_power,
     validate_sample_size,
+    validate_sidedness,
+    validate_allocation_ratio,
 )
 from pyexptest.utils.math import (
     pooled_proportion,
@@ -40,6 +42,8 @@ __all__ = [
     "validate_alpha",
     "validate_power",
     "validate_sample_size",
+    "validate_sidedness",
+    "validate_allocation_ratio",
     "pooled_proportion",
     "pooled_variance",
     "effect_size_cohens_h",

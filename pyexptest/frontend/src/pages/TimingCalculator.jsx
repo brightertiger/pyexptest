@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import FormField from '../components/FormField'
+import { RateComparisonChart, SurvivalPlot } from '../components/charts'
 
 const ANALYSIS_TYPES = {
   survival: {
@@ -600,6 +601,15 @@ function TimingCalculator() {
             </span>
           </div>
 
+          <RateComparisonChart
+            controlRate={result.control_rate}
+            treatmentRate={result.treatment_rate}
+            controlCI={result.control_rate_ci}
+            treatmentCI={result.treatment_rate_ci}
+            label="Event Rate"
+            unit={ratesData.exposure_unit.slice(0, -1)}
+          />
+
           <div className="result-grid">
             <div className="result-item">
               <div className="result-label">Control Rate</div>
@@ -667,6 +677,16 @@ function TimingCalculator() {
               HR = {result.hazard_ratio.toFixed(3)}
             </span>
           </div>
+
+          {result.control_median_time && result.treatment_median_time && (
+            <SurvivalPlot
+              controlMedian={result.control_median_time}
+              treatmentMedian={result.treatment_median_time}
+              controlEvents={result.control_events}
+              treatmentEvents={result.treatment_events}
+              hazardRatio={result.hazard_ratio}
+            />
+          )}
 
           <div className="card-title">Survival Summary</div>
           <table className="summary-table">

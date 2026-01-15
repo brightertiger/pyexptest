@@ -314,6 +314,10 @@ class MagnitudeEffect(FullOutcomeEffect):
         if len(variants) < 2:
             raise ValueError("At least 2 variants are required")
         
+        names = [v["name"] for v in variants]
+        if len(names) != len(set(names)):
+            raise ValueError("Variant names must be unique")
+        
         variant_objects = []
         for v in variants:
             if v["visitors"] <= 0:

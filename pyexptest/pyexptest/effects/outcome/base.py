@@ -71,11 +71,14 @@ class OutcomeEffectAnalyzer(ABC):
         pass
     
     @abstractmethod
-    def confidence_interval(self, *args, **kwargs) -> ConfidenceIntervalBase:
+    def summarize(self, result: EffectResult, test_name: str = "A/B Test") -> str:
         pass
+
+
+class OutcomeEffectWithCI(OutcomeEffectAnalyzer):
     
     @abstractmethod
-    def summarize(self, result: EffectResult, test_name: str = "A/B Test") -> str:
+    def confidence_interval(self, *args, **kwargs) -> ConfidenceIntervalBase:
         pass
 
 
@@ -101,5 +104,5 @@ class DiffInDiffAnalyzer(ABC):
         pass
 
 
-class FullOutcomeEffect(OutcomeEffectAnalyzer, MultiVariantAnalyzer, DiffInDiffAnalyzer):
+class FullOutcomeEffect(OutcomeEffectWithCI, MultiVariantAnalyzer, DiffInDiffAnalyzer):
     pass

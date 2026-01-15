@@ -2,6 +2,7 @@ import { useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import TestTypeSelector from '../components/TestTypeSelector'
 import FormField from '../components/FormField'
+import { DiffInDiffChart } from '../components/charts'
 
 function DiffInDiffCalculator() {
   const [testType, setTestType] = useState('conversion')
@@ -122,7 +123,7 @@ function DiffInDiffCalculator() {
 
       <div className="card">
         <div className="card-title">What are you measuring?</div>
-        <TestTypeSelector value={testType} onChange={setTestType} />
+        <TestTypeSelector value={testType} onChange={(val) => { setTestType(val); setResult(null); setError(null); }} />
       </div>
 
       <form onSubmit={handleSubmit}>
@@ -452,6 +453,15 @@ function DiffInDiffCalculator() {
               }
             </span>
           </div>
+
+          <DiffInDiffChart
+            controlPre={testType === 'conversion' ? result.control_pre_rate : result.control_pre_mean}
+            controlPost={testType === 'conversion' ? result.control_post_rate : result.control_post_mean}
+            treatmentPre={testType === 'conversion' ? result.treatment_pre_rate : result.treatment_pre_mean}
+            treatmentPost={testType === 'conversion' ? result.treatment_post_rate : result.treatment_post_mean}
+            isConversion={testType === 'conversion'}
+            diffInDiff={result.diff_in_diff}
+          />
 
           <div className="card-title">How the groups changed</div>
           <table className="summary-table">

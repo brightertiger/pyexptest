@@ -302,6 +302,7 @@ def hazard_ratio_from_events(
     ctrl_time: float,
     trt_events: int,
     trt_time: float,
+    confidence: int = 95,
 ) -> Tuple[float, float, float]:
     if ctrl_events == 0 or trt_events == 0:
         return 1.0, 0.0, float('inf')
@@ -314,8 +315,10 @@ def hazard_ratio_from_events(
     se_log_hr = math.sqrt(1/ctrl_events + 1/trt_events)
     log_hr = math.log(hr) if hr > 0 else 0
     
-    ci_lower = math.exp(log_hr - 1.96 * se_log_hr)
-    ci_upper = math.exp(log_hr + 1.96 * se_log_hr)
+    alpha = 1 - confidence / 100
+    z = norm.ppf(1 - alpha / 2)
+    ci_lower = math.exp(log_hr - z * se_log_hr)
+    ci_upper = math.exp(log_hr + z * se_log_hr)
     
     return hr, ci_lower, ci_upper
 
@@ -327,6 +330,9 @@ def rate_ratio(
     trt_exposure: float,
     confidence: int = 95,
 ) -> Tuple[float, float, float, float]:
+    if ctrl_exposure <= 0 or trt_exposure <= 0:
+        raise ValueError("Exposure must be positive")
+    
     ctrl_rate = ctrl_events / ctrl_exposure
     trt_rate = trt_events / trt_exposure
     

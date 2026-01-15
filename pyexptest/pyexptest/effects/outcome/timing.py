@@ -3,11 +3,9 @@ from typing import List, Optional, Tuple
 import numpy as np
 from scipy import stats
 
-from pyexptest.effects.outcome.base import OutcomeEffectAnalyzer
 from pyexptest.utils.stats import (
     sample_size_survival,
     hazard_ratio_from_events,
-    rate_ratio as calc_rate_ratio,
 )
 
 
@@ -76,7 +74,7 @@ class RateResults:
     recommendation: str
 
 
-def _kaplan_meier(times: np.ndarray, events: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+def _kaplan_meier(times: np.ndarray, events: np.ndarray, confidence: int = 95) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     sorted_indices = np.argsort(times)
     times = times[sorted_indices]
     events = events[sorted_indices]
@@ -114,7 +112,8 @@ def _kaplan_meier(times: np.ndarray, events: np.ndarray) -> Tuple[np.ndarray, np
     km_times = np.array(km_times)
     
     se = np.sqrt(variance) * survival
-    z = 1.96
+    alpha = 1 - confidence / 100
+    z = stats.norm.ppf(1 - alpha / 2)
     ci_lower = np.maximum(0, survival - z * se)
     ci_upper = np.minimum(1, survival + z * se)
     
@@ -184,28 +183,20 @@ def _estimate_hazard_ratio(
     control_events: np.ndarray,
     treatment_times: np.ndarray,
     treatment_events: np.ndarray,
+    confidence: int = 95,
 ) -> Tuple[float, float, float]:
-    ctrl_events_total = np.sum(control_events)
-    trt_events_total = np.sum(treatment_events)
+    ctrl_events_total = int(np.sum(control_events))
+    trt_events_total = int(np.sum(treatment_events))
+    ctrl_total_time = float(np.sum(control_times))
+    trt_total_time = float(np.sum(treatment_times))
     
-    if ctrl_events_total == 0 or trt_events_total == 0:
-        return 1.0, 0.0, float('inf')
-    
-    ctrl_total_time = np.sum(control_times)
-    trt_total_time = np.sum(treatment_times)
-    
-    ctrl_rate = ctrl_events_total / ctrl_total_time if ctrl_total_time > 0 else 0
-    trt_rate = trt_events_total / trt_total_time if trt_total_time > 0 else 0
-    
-    hr = trt_rate / ctrl_rate if ctrl_rate > 0 else 1.0
-    
-    se_log_hr = np.sqrt(1/ctrl_events_total + 1/trt_events_total)
-    log_hr = np.log(hr) if hr > 0 else 0
-    
-    ci_lower = np.exp(log_hr - 1.96 * se_log_hr)
-    ci_upper = np.exp(log_hr + 1.96 * se_log_hr)
-    
-    return float(hr), float(ci_lower), float(ci_upper)
+    return hazard_ratio_from_events(
+        ctrl_events=ctrl_events_total,
+        ctrl_time=ctrl_total_time,
+        trt_events=trt_events_total,
+        trt_time=trt_total_time,
+        confidence=confidence,
+    )
 
 
 def _generate_timing_recommendation(
@@ -288,7 +279,7 @@ def survival_curve(
     if not np.all((events_arr == 0) | (events_arr == 1)):
         raise ValueError("events must contain only 0 (censored) or 1 (event occurred)")
     
-    km_times, survival, ci_lower, ci_upper = _kaplan_meier(times_arr, events_arr)
+    km_times, survival, ci_lower, ci_upper = _kaplan_meier(times_arr, events_arr, confidence)
     median = _find_median(km_times, survival)
     
     return SurvivalCurve(
@@ -322,18 +313,15 @@ def analyze(
     if len(ctrl_times) == 0 or len(trt_times) == 0:
         raise ValueError("Both groups must have at least one observation")
     
-    _, ctrl_survival, _, _ = _kaplan_meier(ctrl_times, ctrl_events)
-    _, trt_survival, _, _ = _kaplan_meier(trt_times, trt_events)
-    
-    ctrl_km_times, ctrl_surv, _, _ = _kaplan_meier(ctrl_times, ctrl_events)
-    trt_km_times, trt_surv, _, _ = _kaplan_meier(trt_times, trt_events)
+    ctrl_km_times, ctrl_surv, _, _ = _kaplan_meier(ctrl_times, ctrl_events, confidence)
+    trt_km_times, trt_surv, _, _ = _kaplan_meier(trt_times, trt_events, confidence)
     
     ctrl_median = _find_median(ctrl_km_times, ctrl_surv)
     trt_median = _find_median(trt_km_times, trt_surv)
     
     _, p_value = _log_rank_test(ctrl_times, ctrl_events, trt_times, trt_events)
     
-    hr, hr_lower, hr_upper = _estimate_hazard_ratio(ctrl_times, ctrl_events, trt_times, trt_events)
+    hr, hr_lower, hr_upper = _estimate_hazard_ratio(ctrl_times, ctrl_events, trt_times, trt_events, confidence)
     
     alpha = 1 - confidence / 100
     is_significant = p_value < alpha
@@ -635,7 +623,7 @@ def summarize_rates(result: RateResults, test_name: str = "Event Rate Test", uni
     return "\n".join(lines)
 
 
-class TimingEffect(OutcomeEffectAnalyzer):
+class TimingEffect:
     
     def analyze(
         self,
@@ -657,9 +645,6 @@ class TimingEffect(OutcomeEffectAnalyzer):
         allocation_ratio: float = 1.0,
     ) -> TimingSampleSizePlan:
         return sample_size(control_median, treatment_median, confidence, power, dropout_rate, allocation_ratio)
-    
-    def confidence_interval(self, *args, **kwargs):
-        raise NotImplementedError("Use survival_curve for confidence intervals in timing analysis")
     
     def survival_curve(
         self,
@@ -685,8 +670,6 @@ class TimingEffect(OutcomeEffectAnalyzer):
     def summarize_rates(self, result: RateResults, test_name: str = "Event Rate Test", unit: str = "events per day") -> str:
         return summarize_rates(result, test_name, unit)
 
-
-_default_instance = TimingEffect()
 
 __all__ = [
     "TimingEffect",
