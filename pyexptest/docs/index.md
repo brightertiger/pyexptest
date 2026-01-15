@@ -29,7 +29,7 @@ pip install pyexptest
 ## Quick Start
 
 ```python
-from pyexptest import conversion, magnitude
+from pyexptest import conversion, magnitude, timing
 
 # Conversion: Did the treatment change whether users purchase?
 result = conversion.analyze(
@@ -50,12 +50,21 @@ result = magnitude.analyze(
     variant_std=25.00,
 )
 print(f"Revenue lift: ${result.lift_absolute:+.2f}")
+
+# Timing: Did the treatment change when users convert?
+result = timing.analyze(
+    control_times=[5, 8, 12, 15, 20],
+    control_events=[1, 1, 1, 0, 1],
+    treatment_times=[3, 6, 9, 12, 16],
+    treatment_events=[1, 1, 1, 1, 1],
+)
+print(f"Hazard ratio: {result.hazard_ratio:.2f}")
 ```
 
 Or use the fully-qualified path:
 
 ```python
-from pyexptest.effects.outcome import conversion, magnitude
+from pyexptest.effects.outcome import conversion, magnitude, timing
 ```
 
 ---
@@ -196,24 +205,51 @@ print(f"DiD effect: ${result.diff_in_diff:+.2f}")
 
 ## ⏱️ Timing Effects — *When* it happens
 
-*Coming soon.* Will include:
+Use when you care about time-to-event: time to purchase, time to churn, event rates.
 
-- Kaplan-Meier survival curves
-- Log-rank tests
-- Cox proportional hazards
-- Hazard ratios
+### Survival Analysis
 
 ```python
-# Future API (not yet implemented)
 from pyexptest import timing
 
 result = timing.analyze(
-    control_times=[...],
-    control_events=[...],
-    treatment_times=[...],
-    treatment_events=[...],
+    control_times=[5, 8, 12, 15, 18, 22, 25, 30],
+    control_events=[1, 1, 1, 0, 1, 1, 0, 1],      # 1=event, 0=censored
+    treatment_times=[3, 6, 9, 12, 14, 16, 20, 24],
+    treatment_events=[1, 1, 1, 1, 0, 1, 1, 1],
 )
-print(f"Hazard ratio: {result.hazard_ratio:.2f}")
+
+print(f"Control median time: {result.control_median_time}")
+print(f"Treatment median time: {result.treatment_median_time}")
+print(f"Hazard ratio: {result.hazard_ratio:.3f}")
+print(f"Significant: {result.is_significant}")
+```
+
+### Kaplan-Meier Survival Curves
+
+```python
+curve = timing.survival_curve(
+    times=[5, 10, 15, 20, 25, 30],
+    events=[1, 1, 0, 1, 1, 0],
+    confidence=95,
+)
+
+print(f"Median survival time: {curve.median_time}")
+print(f"Survival probabilities: {curve.survival_probabilities}")
+```
+
+### Event Rate Analysis (Poisson)
+
+```python
+result = timing.analyze_rates(
+    control_events=45,
+    control_exposure=100,      # 100 days of observation
+    treatment_events=38,
+    treatment_exposure=100,
+)
+
+print(f"Rate ratio: {result.rate_ratio:.3f}")
+print(f"Significant: {result.is_significant}")
 ```
 
 ---
@@ -230,14 +266,22 @@ print(report)
 
 ---
 
-## Web Interface
+## 🌐 Web Interface
 
-pyexptest includes a web UI for those who prefer clicking over coding:
+pyexptest includes a web UI for interactive analysis:
 
 ```bash
 pyexptest-server
 # Open http://localhost:8000
 ```
+
+Features include:
+
+- **Sample Size Calculator** — Plan tests with intuitive parameter explanations
+- **A/B Test Results** — Analyze 2-variant and multi-variant tests
+- **Timing & Rates** — Survival analysis and Poisson rate comparisons
+- **Diff-in-Diff** — Quasi-experimental causal inference
+- **Confidence Intervals** — Estimate precision of your metrics
 
 ---
 
@@ -251,7 +295,7 @@ This means:
 
 1. **Matches how stakeholders think** — "Did conversion increase?" not "Did we reject the null hypothesis?"
 2. **Avoids false equivalence** — A conversion effect and a magnitude effect are different things
-3. **Generalizes naturally** — Future effect types (timing, variance, durability) fit cleanly
+3. **Generalizes naturally** — Timing, variance, and durability effects fit cleanly
 
 ---
 

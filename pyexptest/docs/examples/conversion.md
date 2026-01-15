@@ -10,9 +10,9 @@ You're testing a new signup button color. After 2 weeks:
 - **Variant (green):** 15,000 visitors, 525 signups
 
 ```python
-from pyexptest import conversion_effect
+from pyexptest import conversion
 
-result = conversion_effect.analyze(
+result = conversion.analyze(
     control_visitors=15000,
     control_conversions=450,
     variant_visitors=15000,
@@ -51,7 +51,7 @@ Testing two email subject lines:
   - Opens: 13,750
 
 ```python
-result = conversion_effect.analyze(
+result = conversion.analyze(
     control_visitors=50000,
     control_conversions=12500,
     variant_visitors=50000,
@@ -82,7 +82,7 @@ Testing a simplified checkout flow:
 - **Variant:** 8,000 visitors, 256 purchases
 
 ```python
-result = conversion_effect.analyze(
+result = conversion.analyze(
     control_visitors=8000,
     control_conversions=240,
     variant_visitors=8000,
@@ -112,7 +112,7 @@ Winner: no winner yet
 You want to test a new landing page. Your current conversion rate is 4% and you want to detect at least a 15% relative improvement.
 
 ```python
-plan = conversion_effect.sample_size(
+plan = conversion.sample_size(
     current_rate=4,       # 4% conversion rate
     lift_percent=15,      # detect 15% lift (4% → 4.6%)
     confidence=95,
@@ -141,14 +141,14 @@ Duration: 7 days
 Generate a report to share with your team:
 
 ```python
-result = conversion_effect.analyze(
+result = conversion.analyze(
     control_visitors=10000,
     control_conversions=500,
     variant_visitors=10000,
     variant_conversions=600,
 )
 
-report = conversion_effect.summarize(
+report = conversion.summarize(
     result,
     test_name="Homepage Hero Banner Test"
 )
@@ -184,7 +184,7 @@ The variant shows a **20.0%** improvement over control.
 Understand the uncertainty in your conversion rate:
 
 ```python
-ci = conversion_effect.confidence_interval(
+ci = conversion.confidence_interval(
     visitors=5000,
     conversions=250,
     confidence=95,

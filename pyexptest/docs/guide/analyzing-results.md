@@ -7,9 +7,9 @@ Once your test has collected enough data, it's time to analyze the results.
 ### Conversion Rate Test
 
 ```python
-from pyexptest import conversion_effect
+from pyexptest import conversion
 
-result = conversion_effect.analyze(
+result = conversion.analyze(
     control_visitors=10000,
     control_conversions=500,      # 5.0%
     variant_visitors=10000,
@@ -28,9 +28,9 @@ print(f"Winner: {result.winner}")
 ### Revenue Test
 
 ```python
-from pyexptest import numeric_effect
+from pyexptest import magnitude
 
-result = numeric_effect.analyze(
+result = magnitude.analyze(
     control_visitors=5000,
     control_mean=50.00,
     control_std=25.00,
@@ -102,7 +102,7 @@ of 0.0003 means there's only a 0.03% probability this result occurred by chance.
 Create shareable reports for stakeholders:
 
 ```python
-report = conversion_effect.summarize(
+report = conversion.summarize(
     result,
     test_name="Homepage CTA Test"
 )
@@ -112,7 +112,7 @@ print(report)
 For revenue tests, customize the metric name and currency:
 
 ```python
-report = numeric_effect.summarize(
+report = magnitude.summarize(
     result,
     test_name="Checkout Flow Test",
     metric_name="Average Order Value",

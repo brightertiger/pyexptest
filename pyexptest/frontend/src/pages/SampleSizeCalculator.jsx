@@ -1,8 +1,21 @@
 import { useState } from 'react'
-import ReactMarkdown from 'react-markdown'
+import TestTypeSelector from '../components/TestTypeSelector'
+import FormField from '../components/FormField'
+
+const CONFIDENCE_OPTIONS = [
+  { value: 90, label: '90%', description: 'Lower bar for significance, faster tests, higher false positive risk (10%)' },
+  { value: 95, label: '95%', description: 'Industry standard. Good balance of speed and reliability (5% false positive risk)' },
+  { value: 99, label: '99%', description: 'Very strict. Longer tests but highly reliable (1% false positive risk)' },
+]
+
+const POWER_OPTIONS = [
+  { value: 70, label: '70%', description: '30% chance of missing a real effect. Use when speed matters more than certainty' },
+  { value: 80, label: '80%', description: 'Standard choice. 20% chance of missing a real effect' },
+  { value: 90, label: '90%', description: 'High sensitivity. Only 10% chance of missing a real effect, but requires more samples' },
+]
 
 function SampleSizeCalculator() {
-  const [testType, setTestType] = useState('binary')
+  const [testType, setTestType] = useState('conversion')
   const [formData, setFormData] = useState({
     current_rate: 5,
     lift_percent: 10,
@@ -11,10 +24,12 @@ function SampleSizeCalculator() {
     daily_visitors: '',
     current_mean: 50,
     current_std: 25,
+    num_variants: 2,
   })
   const [result, setResult] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [showAdvanced, setShowAdvanced] = useState(false)
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -29,17 +44,18 @@ function SampleSizeCalculator() {
     setLoading(true)
     setError(null)
     
-    const endpoint = testType === 'binary' 
+    const endpoint = testType === 'conversion' 
       ? '/api/conversion/sample-size'
       : '/api/magnitude/sample-size'
     
-    const payload = testType === 'binary'
+    const payload = testType === 'conversion'
       ? {
           current_rate: formData.current_rate,
           lift_percent: formData.lift_percent,
           confidence: formData.confidence,
           power: formData.power,
           daily_visitors: formData.daily_visitors || null,
+          num_variants: formData.num_variants,
         }
       : {
           current_mean: formData.current_mean,
@@ -48,6 +64,7 @@ function SampleSizeCalculator() {
           confidence: formData.confidence,
           power: formData.power,
           daily_visitors: formData.daily_visitors || null,
+          num_variants: formData.num_variants,
         }
     
     try {
@@ -71,40 +88,44 @@ function SampleSizeCalculator() {
     }
   }
 
+  const selectedConfidence = CONFIDENCE_OPTIONS.find(c => c.value === formData.confidence)
+  const selectedPower = POWER_OPTIONS.find(p => p.value === formData.power)
+
   return (
     <div>
       <div className="page-header">
         <h1 className="page-title">Sample Size Calculator</h1>
         <p className="page-description">
-          Calculate how many visitors you need for a reliable A/B test.
+          Calculate how many visitors you need before starting your A/B test to detect a meaningful difference.
         </p>
       </div>
 
-      <div className="card">
-        <div className="card-title">Test Type</div>
-        <div className="toggle-group">
-          <button 
-            className={`toggle-option ${testType === 'binary' ? 'active' : ''}`}
-            onClick={() => setTestType('binary')}
-          >
-            Conversion Rate
-          </button>
-          <button 
-            className={`toggle-option ${testType === 'continuous' ? 'active' : ''}`}
-            onClick={() => setTestType('continuous')}
-          >
-            Revenue / AOV
-          </button>
+      <div className="info-box">
+        <span className="info-box-icon">💡</span>
+        <div className="info-box-content">
+          <div className="info-box-title">Why calculate sample size first?</div>
+          <div className="info-box-text">
+            Running a test without enough visitors leads to inconclusive results. Too many visitors wastes time. 
+            This calculator tells you exactly how many visitors you need to reliably detect your target improvement.
+          </div>
         </div>
+      </div>
+
+      <div className="card">
+        <div className="card-title">What are you measuring?</div>
+        <TestTypeSelector value={testType} onChange={setTestType} />
       </div>
 
       <form onSubmit={handleSubmit}>
         <div className="card">
-          <div className="card-title">Parameters</div>
+          <div className="card-title">Current Performance</div>
           <div className="form-grid">
-            {testType === 'binary' ? (
-              <div className="form-group">
-                <label className="form-label">Current Conversion Rate (%)</label>
+            {testType === 'conversion' ? (
+              <FormField 
+                label="Current Conversion Rate (%)" 
+                hint="Your baseline conversion rate before any changes"
+                required
+              >
                 <input
                   type="number"
                   name="current_rate"
@@ -114,13 +135,16 @@ function SampleSizeCalculator() {
                   step="any"
                   min="0.01"
                   max="99"
-                  placeholder="5"
+                  placeholder="e.g., 5 for 5%"
                 />
-              </div>
+              </FormField>
             ) : (
               <>
-                <div className="form-group">
-                  <label className="form-label">Current Average Value</label>
+                <FormField 
+                  label="Current Average Value" 
+                  hint="Average value per visitor (e.g., average order value)"
+                  required
+                >
                   <input
                     type="number"
                     name="current_mean"
@@ -128,11 +152,14 @@ function SampleSizeCalculator() {
                     value={formData.current_mean}
                     onChange={handleChange}
                     step="any"
-                    placeholder="50"
+                    placeholder="e.g., 50"
                   />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Standard Deviation</label>
+                </FormField>
+                <FormField 
+                  label="Standard Deviation" 
+                  hint="How spread out your values are. If unsure, use 50-100% of the mean"
+                  required
+                >
                   <input
                     type="number"
                     name="current_std"
@@ -141,14 +168,17 @@ function SampleSizeCalculator() {
                     onChange={handleChange}
                     step="any"
                     min="0.01"
-                    placeholder="25"
+                    placeholder="e.g., 25"
                   />
-                </div>
+                </FormField>
               </>
             )}
 
-            <div className="form-group">
-              <label className="form-label">Minimum Lift to Detect (%)</label>
+            <FormField 
+              label="Minimum Lift to Detect (%)" 
+              hint="The smallest improvement worth detecting. Smaller lifts need more visitors"
+              required
+            >
               <input
                 type="number"
                 name="lift_percent"
@@ -157,12 +187,14 @@ function SampleSizeCalculator() {
                 onChange={handleChange}
                 step="1"
                 min="1"
-                placeholder="10"
+                placeholder="e.g., 10 for 10% improvement"
               />
-            </div>
+            </FormField>
 
-            <div className="form-group">
-              <label className="form-label">Daily Visitors (optional)</label>
+            <FormField 
+              label="Daily Visitors (optional)" 
+              hint="Enter to calculate test duration"
+            >
               <input
                 type="number"
                 name="daily_visitors"
@@ -171,42 +203,85 @@ function SampleSizeCalculator() {
                 onChange={handleChange}
                 step="100"
                 min="1"
-                placeholder="10000"
+                placeholder="e.g., 10000"
               />
-            </div>
+            </FormField>
+          </div>
+        </div>
 
-            <div className="form-group">
-              <label className="form-label">Confidence Level</label>
-              <select
-                name="confidence"
-                className="form-select"
-                value={formData.confidence}
-                onChange={handleChange}
-              >
-                <option value={90}>90%</option>
-                <option value={95}>95%</option>
-                <option value={99}>99%</option>
-              </select>
-            </div>
+        <div className="card">
+          <div className="card-title">Statistical Settings</div>
+          
+          <FormField 
+            label="Confidence Level" 
+            hint={selectedConfidence?.description}
+          >
+            <select
+              name="confidence"
+              className="form-select"
+              value={formData.confidence}
+              onChange={handleChange}
+            >
+              {CONFIDENCE_OPTIONS.map(opt => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+          </FormField>
 
-            <div className="form-group">
-              <label className="form-label">Statistical Power</label>
+          <div style={{ marginTop: '16px' }}>
+            <FormField 
+              label="Statistical Power" 
+              hint={selectedPower?.description}
+            >
               <select
                 name="power"
                 className="form-select"
                 value={formData.power}
                 onChange={handleChange}
               >
-                <option value={70}>70%</option>
-                <option value={80}>80%</option>
-                <option value={90}>90%</option>
+                {POWER_OPTIONS.map(opt => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
               </select>
-            </div>
+            </FormField>
           </div>
+
+          <div className="section-divider">
+            <div className="section-divider-line"></div>
+            <button 
+              type="button" 
+              className="section-divider-text"
+              onClick={() => setShowAdvanced(!showAdvanced)}
+              style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+            >
+              {showAdvanced ? '▼ Hide Advanced' : '▶ Show Advanced'}
+            </button>
+            <div className="section-divider-line"></div>
+          </div>
+
+          {showAdvanced && (
+            <FormField 
+              label="Number of Variants" 
+              hint="Including control. More variants = more visitors needed per variant"
+            >
+              <select
+                name="num_variants"
+                className="form-select"
+                value={formData.num_variants}
+                onChange={handleChange}
+                style={{ maxWidth: '200px' }}
+              >
+                <option value={2}>2 (A/B test)</option>
+                <option value={3}>3 (A/B/C test)</option>
+                <option value={4}>4 variants</option>
+                <option value={5}>5 variants</option>
+              </select>
+            </FormField>
+          )}
 
           <div style={{ marginTop: '24px' }}>
             <button type="submit" className="btn btn-primary" disabled={loading}>
-              {loading ? 'Calculating...' : 'Calculate'}
+              {loading ? 'Calculating...' : 'Calculate Sample Size'}
             </button>
           </div>
         </div>
@@ -237,19 +312,46 @@ function SampleSizeCalculator() {
               </div>
             )}
             <div className="result-item">
-              <div className="result-label">Expected Rate</div>
+              <div className="result-label">Expected {testType === 'conversion' ? 'Rate' : 'Value'}</div>
               <div className="result-value">
-                {testType === 'binary' 
-                  ? `${(result.expected_rate * 100).toFixed(1)}%`
-                  : `$${result.expected_mean?.toFixed(0)}`
+                {testType === 'conversion' 
+                  ? `${(result.expected_rate * 100).toFixed(2)}%`
+                  : `$${result.expected_mean?.toFixed(2)}`
                 }
+              </div>
+            </div>
+          </div>
+
+          <div className="stats-explanation">
+            <div className="stats-card">
+              <div className="stats-card-label">What you're testing</div>
+              <div className="stats-card-value">
+                {testType === 'conversion' 
+                  ? `${(result.current_rate * 100).toFixed(1)}% → ${(result.expected_rate * 100).toFixed(1)}%`
+                  : `$${result.current_mean?.toFixed(0)} → $${result.expected_mean?.toFixed(0)}`
+                }
+              </div>
+              <div className="stats-card-explanation">
+                You want to detect if your variant achieves at least a {result.lift_percent}% improvement 
+                over current performance.
+              </div>
+            </div>
+            <div className="stats-card">
+              <div className="stats-card-label">Reliability</div>
+              <div className="stats-card-value">{result.power}% power</div>
+              <div className="stats-card-explanation">
+                If the variant truly improves by {result.lift_percent}% or more, this test has a {result.power}% 
+                chance of detecting it.
               </div>
             </div>
           </div>
 
           <div className="callout callout-info" style={{ marginTop: '16px' }}>
             <div className="callout-text">
-              If the variant improves by {result.lift_percent}% or more, this test has an {result.power}% chance of detecting it with {result.confidence}% confidence.
+              <strong>How to interpret:</strong> Run your test until you have {result.visitors_per_variant.toLocaleString()} visitors 
+              in each variant ({result.total_visitors.toLocaleString()} total). 
+              {result.test_duration_days && ` At your traffic level, this takes about ${result.test_duration_days} days.`}
+              {' '}Stopping early increases the risk of false conclusions.
             </div>
           </div>
         </div>

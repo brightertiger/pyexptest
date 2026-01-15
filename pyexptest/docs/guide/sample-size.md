@@ -16,9 +16,9 @@ A proper sample size calculation ensures:
 ## For Conversion Rate Tests
 
 ```python
-from pyexptest import conversion_effect
+from pyexptest import conversion
 
-plan = conversion_effect.sample_size(
+plan = conversion.sample_size(
     current_rate=5,       # Your current conversion rate (5%)
     lift_percent=10,      # Minimum lift you want to detect (10%)
     confidence=95,        # Confidence level (default: 95%)
@@ -53,9 +53,9 @@ print(f"Test duration: {plan.test_duration_days} days")
 ## For Revenue / Numeric Tests
 
 ```python
-from pyexptest import numeric_effect
+from pyexptest import magnitude
 
-plan = numeric_effect.sample_size(
+plan = magnitude.sample_size(
     current_mean=50,      # Current average order value ($50)
     current_std=25,       # Standard deviation ($25)
     lift_percent=5,       # Minimum lift you want to detect (5%)
@@ -83,7 +83,7 @@ Or use this rule of thumb:
 Testing 3+ variants requires more sample size:
 
 ```python
-plan = conversion_effect.sample_size(
+plan = conversion.sample_size(
     current_rate=5,
     lift_percent=10,
     num_variants=3,  # Control + 2 variants
@@ -107,7 +107,7 @@ print(f"Total: {plan.total_visitors:,}")  # ~50% more than 2-variant
 Create a stakeholder-friendly plan:
 
 ```python
-report = conversion_effect.summarize_plan(
+report = conversion.summarize_plan(
     plan, 
     test_name="Homepage CTA Test"
 )

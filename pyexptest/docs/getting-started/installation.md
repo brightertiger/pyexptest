@@ -45,10 +45,10 @@ For the web interface, additional dependencies are installed:
 After installation, verify that pyexptest is working:
 
 ```python
-from pyexptest import conversion_effect, numeric_effect
+from pyexptest import conversion, magnitude
 
 # Calculate sample size for a conversion test
-plan = conversion_effect.sample_size(current_rate=5, lift_percent=10)
+plan = conversion.sample_size(current_rate=5, lift_percent=10)
 print(f"Sample size needed: {plan.visitors_per_variant:,} per variant")
 ```
 

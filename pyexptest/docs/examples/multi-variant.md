@@ -7,9 +7,9 @@ Real-world examples of using pyexptest for tests with 3+ variants.
 Testing 4 button colors on your CTA:
 
 ```python
-from pyexptest import conversion_effect
+from pyexptest import conversion
 
-result = conversion_effect.analyze_multi(
+result = conversion.analyze_multi(
     variants=[
         {"name": "blue (control)", "visitors": 10000, "conversions": 500},
         {"name": "green", "visitors": 10000, "conversions": 580},
@@ -50,9 +50,9 @@ Variant Performance:
 Testing 3 pricing page layouts:
 
 ```python
-from pyexptest import numeric_effect
+from pyexptest import magnitude
 
-result = numeric_effect.analyze_multi(
+result = magnitude.analyze_multi(
     variants=[
         {"name": "control", "visitors": 2000, "mean": 49.00, "std": 22.00},
         {"name": "comparison_table", "visitors": 2000, "mean": 52.00, "std": 24.00},
@@ -89,7 +89,7 @@ Variant Performance:
 The overall test tells you "something is different," but pairwise comparisons tell you "what specifically":
 
 ```python
-result = conversion_effect.analyze_multi(
+result = conversion.analyze_multi(
     variants=[
         {"name": "control", "visitors": 10000, "conversions": 500},
         {"name": "variant_a", "visitors": 10000, "conversions": 520},
@@ -136,7 +136,7 @@ Compare sample size requirements for different numbers of variants:
 
 ```python
 for num_variants in [2, 3, 4, 5]:
-    plan = conversion_effect.sample_size(
+    plan = conversion.sample_size(
         current_rate=5,
         lift_percent=10,
         num_variants=num_variants,
@@ -160,7 +160,7 @@ Output:
 ## Example 5: Stakeholder Report (Conversion)
 
 ```python
-result = conversion_effect.analyze_multi(
+result = conversion.analyze_multi(
     variants=[
         {"name": "control", "visitors": 15000, "conversions": 600},
         {"name": "simplified_form", "visitors": 15000, "conversions": 720},
@@ -168,7 +168,7 @@ result = conversion_effect.analyze_multi(
     ]
 )
 
-report = conversion_effect.summarize_multi(
+report = conversion.summarize_multi(
     result,
     test_name="Signup Form Test"
 )
@@ -214,7 +214,7 @@ With 95% confidence, there are real differences between your variants.
 ## Example 6: Stakeholder Report (Revenue)
 
 ```python
-result = numeric_effect.analyze_multi(
+result = magnitude.analyze_multi(
     variants=[
         {"name": "standard", "visitors": 3000, "mean": 48.00, "std": 22.00},
         {"name": "premium_upsell", "visitors": 3000, "mean": 54.00, "std": 28.00},
@@ -222,7 +222,7 @@ result = numeric_effect.analyze_multi(
     ]
 )
 
-report = numeric_effect.summarize_multi(
+report = magnitude.summarize_multi(
     result,
     test_name="Checkout Upsell Test",
     metric_name="Average Order Value",
@@ -273,13 +273,13 @@ You can disable Bonferroni correction, but this increases false positive risk:
 
 ```python
 # With Bonferroni (default, recommended)
-result_bonf = conversion_effect.analyze_multi(
+result_bonf = conversion.analyze_multi(
     variants=[...],
     correction="bonferroni"
 )
 
 # Without correction (higher false positive risk)
-result_none = conversion_effect.analyze_multi(
+result_none = conversion.analyze_multi(
     variants=[...],
     correction="none"
 )

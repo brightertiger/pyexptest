@@ -21,9 +21,9 @@ A confidence interval tells you "how big is the difference likely to be?"
 Get the range for a single conversion rate:
 
 ```python
-from pyexptest import conversion_effect
+from pyexptest import conversion
 
-ci = conversion_effect.confidence_interval(
+ci = conversion.confidence_interval(
     visitors=1000,
     conversions=50,
     confidence=95,
@@ -46,9 +46,9 @@ Margin of error: ±1.35%
 Get the range for a numeric metric:
 
 ```python
-from pyexptest import numeric_effect
+from pyexptest import magnitude
 
-ci = numeric_effect.confidence_interval(
+ci = magnitude.confidence_interval(
     visitors=1000,
     mean=50.00,
     std=25.00,
@@ -64,7 +64,7 @@ print(f"95% CI: [${ci.lower:.2f}, ${ci.upper:.2f}]")
 Every test result includes confidence intervals for the **lift**:
 
 ```python
-result = conversion_effect.analyze(...)
+result = conversion.analyze(...)
 
 print(f"Lift: {result.lift_absolute:.4f}")
 print(f"CI: [{result.confidence_interval_lower:.4f}, {result.confidence_interval_upper:.4f}]")
@@ -84,11 +84,11 @@ Larger samples give narrower (more precise) confidence intervals:
 
 ```python
 # Small sample
-ci_small = conversion_effect.confidence_interval(visitors=100, conversions=5)
+ci_small = conversion.confidence_interval(visitors=100, conversions=5)
 print(f"n=100: [{ci_small.lower:.2%}, {ci_small.upper:.2%}]")
 
 # Large sample
-ci_large = conversion_effect.confidence_interval(visitors=10000, conversions=500)
+ci_large = conversion.confidence_interval(visitors=10000, conversions=500)
 print(f"n=10000: [{ci_large.lower:.2%}, {ci_large.upper:.2%}]")
 ```
 
@@ -109,9 +109,9 @@ Common choices:
 | 99% | 2.576 | High-stakes decisions |
 
 ```python
-ci_90 = conversion_effect.confidence_interval(visitors=1000, conversions=50, confidence=90)
-ci_95 = conversion_effect.confidence_interval(visitors=1000, conversions=50, confidence=95)
-ci_99 = conversion_effect.confidence_interval(visitors=1000, conversions=50, confidence=99)
+ci_90 = conversion.confidence_interval(visitors=1000, conversions=50, confidence=90)
+ci_95 = conversion.confidence_interval(visitors=1000, conversions=50, confidence=95)
+ci_99 = conversion.confidence_interval(visitors=1000, conversions=50, confidence=99)
 
 print(f"90% CI: [{ci_90.lower:.2%}, {ci_90.upper:.2%}]")
 print(f"95% CI: [{ci_95.lower:.2%}, {ci_95.upper:.2%}]")

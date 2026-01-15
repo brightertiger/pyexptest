@@ -32,12 +32,12 @@ This isolates the treatment effect by subtracting out the natural trend observed
 ### Basic Example
 
 ```python
-from pyexptest import conversion_effect
+from pyexptest import conversion
 
 # You launched a new feature to West Coast users
 # East Coast users serve as the control group
 
-result = conversion_effect.diff_in_diff(
+result = conversion.diff_in_diff(
     # Control (East Coast) - no feature
     control_pre_visitors=10000,
     control_pre_conversions=500,     # 5% before
@@ -82,12 +82,12 @@ Without DiD, you might have claimed a 1.50% improvement, but 0.25% of that was j
 ### Basic Example
 
 ```python
-from pyexptest import numeric_effect
+from pyexptest import magnitude
 
 # Testing a premium checkout experience
 # Rolled out to "Gold" tier customers first
 
-result = numeric_effect.diff_in_diff(
+result = magnitude.diff_in_diff(
     # Control (Silver customers) - standard checkout
     control_pre_n=2000,
     control_pre_mean=75.00,
@@ -124,7 +124,7 @@ Significant: True
 ### Conversion Rate Report
 
 ```python
-report = conversion_effect.summarize_diff_in_diff(
+report = conversion.summarize_diff_in_diff(
     result,
     test_name="West Coast Feature Launch"
 )
@@ -165,7 +165,7 @@ This effect is statistically significant at the 95% confidence level.
 ### Revenue Report
 
 ```python
-report = numeric_effect.summarize_diff_in_diff(
+report = magnitude.summarize_diff_in_diff(
     result,
     test_name="Premium Checkout Analysis",
     metric_name="Average Order Value",

@@ -29,7 +29,7 @@ pip install pyexptest
 ## Quick Start
 
 ```python
-from pyexptest import conversion, magnitude
+from pyexptest import conversion, magnitude, timing
 
 # Conversion: Did the treatment change whether users purchase?
 result = conversion.analyze(
@@ -50,12 +50,15 @@ result = magnitude.analyze(
     variant_std=25.00,
 )
 print(f"Revenue lift: ${result.lift_absolute:+.2f}")
-```
 
-Or use the fully-qualified path:
-
-```python
-from pyexptest.effects.outcome import conversion, magnitude
+# Timing: Did the treatment change when users convert?
+result = timing.analyze(
+    control_times=[5, 8, 12, 15, 20],
+    control_events=[1, 1, 1, 0, 1],
+    treatment_times=[3, 6, 9, 12, 16],
+    treatment_events=[1, 1, 1, 1, 1],
+)
+print(f"Hazard ratio: {result.hazard_ratio:.2f}")
 ```
 
 ---
@@ -196,24 +199,72 @@ print(f"DiD effect: ${result.diff_in_diff:+.2f}")
 
 ## ⏱️ Timing Effects — *When* it happens
 
-*Coming soon.* Will include:
+Use when you care about time-to-event: time to purchase, time to churn, event rates.
 
-- Kaplan-Meier survival curves
-- Log-rank tests
-- Cox proportional hazards
-- Hazard ratios
+### Survival Analysis
 
 ```python
-# Future API (not yet implemented)
 from pyexptest import timing
 
 result = timing.analyze(
-    control_times=[...],
-    control_events=[...],
-    treatment_times=[...],
-    treatment_events=[...],
+    control_times=[5, 8, 12, 15, 18, 22, 25, 30],
+    control_events=[1, 1, 1, 0, 1, 1, 0, 1],      # 1=event, 0=censored
+    treatment_times=[3, 6, 9, 12, 14, 16, 20, 24],
+    treatment_events=[1, 1, 1, 1, 0, 1, 1, 1],
 )
-print(f"Hazard ratio: {result.hazard_ratio:.2f}")
+
+print(f"Control median time: {result.control_median_time}")
+print(f"Treatment median time: {result.treatment_median_time}")
+print(f"Hazard ratio: {result.hazard_ratio:.3f}")
+print(f"Time saved: {result.time_saved:.1f} ({result.time_saved_percent:.1f}%)")
+print(f"Significant: {result.is_significant}")
+```
+
+### Kaplan-Meier Survival Curves
+
+```python
+curve = timing.survival_curve(
+    times=[5, 10, 15, 20, 25, 30],
+    events=[1, 1, 0, 1, 1, 0],
+    confidence=95,
+)
+
+print(f"Median survival time: {curve.median_time}")
+print(f"Survival probabilities: {curve.survival_probabilities}")
+```
+
+### Event Rate Analysis (Poisson)
+
+Compare event rates between groups (e.g., support tickets per day, errors per hour):
+
+```python
+result = timing.analyze_rates(
+    control_events=45,
+    control_exposure=100,      # 100 days of observation
+    treatment_events=38,
+    treatment_exposure=100,
+)
+
+print(f"Control rate: {result.control_rate:.4f} events/day")
+print(f"Treatment rate: {result.treatment_rate:.4f} events/day")
+print(f"Rate ratio: {result.rate_ratio:.3f}")
+print(f"Rate change: {result.rate_difference_percent:+.1f}%")
+print(f"Significant: {result.is_significant}")
+```
+
+### Sample Size for Survival Studies
+
+```python
+plan = timing.sample_size(
+    control_median=30,        # Expected median for control
+    treatment_median=24,      # Expected median for treatment
+    confidence=95,
+    power=80,
+    dropout_rate=0.1,         # 10% expected dropout
+)
+
+print(f"Need {plan.subjects_per_group:,} per group")
+print(f"Expected events: {plan.total_expected_events:,}")
 ```
 
 ---
@@ -249,6 +300,35 @@ With 95% confidence, the variant shows a **20.0%** improvement.
 
 ---
 
+## 🌐 Web Interface
+
+pyexptest includes a beautiful web UI for interactive analysis:
+
+```bash
+pyexptest-server
+# Open http://localhost:8000
+```
+
+### Features
+
+| Tool | Description |
+|------|-------------|
+| **Sample Size Calculator** | Plan tests with intuitive parameter explanations |
+| **A/B Test Results** | Analyze 2-variant and multi-variant tests |
+| **Timing & Rates** | Survival analysis and Poisson rate comparisons |
+| **Diff-in-Diff** | Quasi-experimental causal inference |
+| **Confidence Intervals** | Estimate precision of your metrics |
+
+The web interface includes:
+
+- **Visual metric type selection** with examples (Conversion Rate vs Revenue)
+- **Helpful hints** explaining what each parameter means
+- **Plain-language interpretations** of statistical results
+- **Multi-variant testing** with automatic Bonferroni correction
+- **Interactive results** with confidence intervals and recommendations
+
+---
+
 ## API Reference
 
 ### conversion module
@@ -256,7 +336,7 @@ With 95% confidence, the variant shows a **20.0%** improvement.
 | Function | Purpose |
 |----------|---------|
 | `sample_size(current_rate, lift_percent, ...)` | Sample size calculation |
-| `analyze(control_visitors, control_conversions, ...)` | 2-variant test |
+| `analyze(control_visitors, control_conversions, ...)` | 2-variant test (Z-test) |
 | `analyze_multi(variants, ...)` | Multi-variant test (Chi-square) |
 | `diff_in_diff(...)` | Difference-in-Differences |
 | `confidence_interval(visitors, conversions, ...)` | CI for a rate |
@@ -273,13 +353,16 @@ With 95% confidence, the variant shows a **20.0%** improvement.
 | `confidence_interval(visitors, mean, std, ...)` | CI for a mean |
 | `summarize(result, test_name, metric_name, currency)` | Markdown report |
 
-### timing module *(coming soon)*
+### timing module
 
 | Function | Purpose |
 |----------|---------|
-| `analyze(...)` | Survival analysis |
-| `kaplan_meier(...)` | Survival curves |
-| `summarize(...)` | Markdown report |
+| `analyze(control_times, control_events, ...)` | Survival analysis (log-rank test) |
+| `survival_curve(times, events, ...)` | Kaplan-Meier curve |
+| `analyze_rates(control_events, control_exposure, ...)` | Poisson rate comparison |
+| `sample_size(control_median, treatment_median, ...)` | Sample size for survival |
+| `summarize(result, test_name)` | Markdown report |
+| `summarize_rates(result, test_name, unit)` | Rate analysis report |
 
 ---
 
@@ -289,14 +372,16 @@ With 95% confidence, the variant shows a **20.0%** improvement.
 pyexptest/
   effects/
     outcome/
-      conversion.py    # Whether it happens
-      magnitude.py     # How much it happens
-      timing.py        # When it happens (coming soon)
+      conversion.py    # Whether it happens (binary outcomes)
+      magnitude.py     # How much it happens (continuous values)
+      timing.py        # When it happens (time-to-event, rates)
 ```
 
 ---
 
-## Understanding P-Values
+## Understanding Results
+
+### P-Values
 
 | P-value | Interpretation |
 |---------|----------------|
@@ -305,14 +390,32 @@ pyexptest/
 | 0.05 - 0.10 | Weak evidence |
 | > 0.10 | Not enough evidence |
 
+### Hazard Ratios (Timing)
+
+| Hazard Ratio | Interpretation |
+|--------------|----------------|
+| HR < 1 | Treatment slows events (protective) |
+| HR = 1 | No effect on timing |
+| HR > 1 | Treatment speeds up events |
+
+### Rate Ratios (Poisson)
+
+| Rate Ratio | Interpretation |
+|------------|----------------|
+| RR < 1 | Treatment reduces event rate |
+| RR = 1 | No effect on rate |
+| RR > 1 | Treatment increases event rate |
+
 ---
 
-## Web Interface
+## Best Practices
 
-```bash
-pyexptest-server
-# Open http://localhost:8000
-```
+1. **Decide sample size BEFORE starting** — Don't peek and stop early
+2. **Run for at least 1-2 weeks** — Capture weekly patterns
+3. **Look at confidence intervals** — Not just p-values
+4. **Statistical significance ≠ business significance** — A 0.1% lift might be "significant" but not worth it
+5. **Use Bonferroni correction** — For multi-variant tests (automatic in `analyze_multi`)
+6. **Consider timing effects** — A treatment might speed up conversion without changing the rate
 
 ---
 
@@ -326,17 +429,7 @@ This means:
 
 1. **Matches how stakeholders think** — "Did conversion increase?" not "Did we reject the null hypothesis?"
 2. **Avoids false equivalence** — A conversion effect and a magnitude effect are different things
-3. **Generalizes naturally** — Future effect types (timing, variance, durability) fit cleanly
-
----
-
-## Best Practices
-
-1. **Decide sample size BEFORE starting** — Don't peek and stop early
-2. **Run for at least 1-2 weeks** — Capture weekly patterns
-3. **Look at confidence intervals** — Not just p-values
-4. **Statistical significance ≠ business significance** — A 0.1% lift might be "significant" but not worth it
-5. **Use Bonferroni correction** — For multi-variant tests
+3. **Generalizes naturally** — Timing, variance, and durability effects fit cleanly
 
 ---
 

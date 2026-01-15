@@ -18,18 +18,18 @@ Sometimes you want to test more than one variant at a time. pyexptest supports m
 Multi-variant tests need more sample size:
 
 ```python
-from pyexptest import conversion_effect
+from pyexptest import conversion
 
 # 2-variant test
-plan_2 = conversion_effect.sample_size(current_rate=5, lift_percent=10, num_variants=2)
+plan_2 = conversion.sample_size(current_rate=5, lift_percent=10, num_variants=2)
 print(f"2 variants: {plan_2.total_visitors:,} total")
 
 # 3-variant test
-plan_3 = conversion_effect.sample_size(current_rate=5, lift_percent=10, num_variants=3)
+plan_3 = conversion.sample_size(current_rate=5, lift_percent=10, num_variants=3)
 print(f"3 variants: {plan_3.total_visitors:,} total")
 
 # 4-variant test
-plan_4 = conversion_effect.sample_size(current_rate=5, lift_percent=10, num_variants=4)
+plan_4 = conversion.sample_size(current_rate=5, lift_percent=10, num_variants=4)
 print(f"4 variants: {plan_4.total_visitors:,} total")
 ```
 
@@ -48,9 +48,9 @@ Output:
 Use Chi-square test for conversion rate multi-variant tests:
 
 ```python
-from pyexptest import conversion_effect
+from pyexptest import conversion
 
-result = conversion_effect.analyze_multi(
+result = conversion.analyze_multi(
     variants=[
         {"name": "control", "visitors": 10000, "conversions": 500},
         {"name": "red_button", "visitors": 10000, "conversions": 550},
@@ -87,9 +87,9 @@ for p in result.pairwise_comparisons:
 Use ANOVA for numeric metric multi-variant tests:
 
 ```python
-from pyexptest import numeric_effect
+from pyexptest import magnitude
 
-result = numeric_effect.analyze_multi(
+result = magnitude.analyze_multi(
     variants=[
         {"name": "control", "visitors": 1000, "mean": 50, "std": 25},
         {"name": "simple_checkout", "visitors": 1000, "mean": 52, "std": 25},
@@ -107,10 +107,10 @@ When making multiple comparisons, we adjust p-values to avoid false positives:
 
 ```python
 # With correction (default)
-result = conversion_effect.analyze_multi(variants, correction="bonferroni")
+result = conversion.analyze_multi(variants, correction="bonferroni")
 
 # Without correction (not recommended)
-result = conversion_effect.analyze_multi(variants, correction="none")
+result = conversion.analyze_multi(variants, correction="none")
 ```
 
 !!! info "Why Bonferroni?"
@@ -119,7 +119,7 @@ result = conversion_effect.analyze_multi(variants, correction="none")
 ## Generating Reports
 
 ```python
-report = conversion_effect.summarize_multi(
+report = conversion.summarize_multi(
     result,
     test_name="Button Color Test"
 )

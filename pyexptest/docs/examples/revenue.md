@@ -10,9 +10,9 @@ You're testing a product recommendation feature. After 2 weeks:
 - **Variant:** 3,000 orders, $52.30 average, $24.00 std dev
 
 ```python
-from pyexptest import numeric_effect
+from pyexptest import magnitude
 
-result = numeric_effect.analyze(
+result = magnitude.analyze(
     control_visitors=3000,
     control_mean=48.50,
     control_std=22.00,
@@ -49,7 +49,7 @@ Testing a new content layout to increase engagement:
 - **Variant:** 5,000 sessions, 195 seconds average, 130 seconds std dev
 
 ```python
-result = numeric_effect.analyze(
+result = magnitude.analyze(
     control_visitors=5000,
     control_mean=180,
     control_std=120,
@@ -79,7 +79,7 @@ Significant: True
 You want to test a premium upsell feature. Your current AOV is $45 with a std dev of $30.
 
 ```python
-plan = numeric_effect.sample_size(
+plan = magnitude.sample_size(
     current_mean=45,      # $45 AOV
     current_std=30,       # $30 standard deviation
     lift_percent=5,       # detect 5% lift ($45 → $47.25)
@@ -112,7 +112,7 @@ Testing a new pricing page:
 - **Variant:** 2,000 customers, $56.50 average, $30.00 std dev
 
 ```python
-result = numeric_effect.analyze(
+result = magnitude.analyze(
     control_visitors=2000,
     control_mean=55.00,
     control_std=28.00,
@@ -144,7 +144,7 @@ Winner: no winner yet
 Generate a report in different currencies:
 
 ```python
-result = numeric_effect.analyze(
+result = magnitude.analyze(
     control_visitors=5000,
     control_mean=45.00,
     control_std=20.00,
@@ -154,7 +154,7 @@ result = numeric_effect.analyze(
 )
 
 # Report in USD
-report_usd = numeric_effect.summarize(
+report_usd = magnitude.summarize(
     result,
     test_name="Checkout Upsell Test",
     metric_name="Average Order Value",
@@ -162,7 +162,7 @@ report_usd = numeric_effect.summarize(
 )
 
 # Report in EUR
-report_eur = numeric_effect.summarize(
+report_eur = magnitude.summarize(
     result,
     test_name="Checkout Upsell Test",
     metric_name="Average Order Value",
@@ -200,7 +200,7 @@ The variant shows a **$3.00** (6.7%) improvement over control.
 Understand the uncertainty in your average order value:
 
 ```python
-ci = numeric_effect.confidence_interval(
+ci = magnitude.confidence_interval(
     visitors=1000,
     mean=50.00,
     std=25.00,
@@ -228,7 +228,7 @@ Margin of error: ±$1.55
 If your test wins, estimate the annual revenue impact:
 
 ```python
-result = numeric_effect.analyze(
+result = magnitude.analyze(
     control_visitors=5000,
     control_mean=50.00,
     control_std=25.00,

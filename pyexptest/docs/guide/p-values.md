@@ -21,9 +21,9 @@ The p-value is the probability of seeing results **as extreme as yours** if ther
 ### Example
 
 ```python
-from pyexptest import conversion_effect
+from pyexptest import conversion
 
-result = conversion_effect.analyze(
+result = conversion.analyze(
     control_visitors=10000,
     control_conversions=500,    # 5.0%
     variant_visitors=10000,
@@ -71,11 +71,11 @@ else:
 
 ```python
 # 95% confidence (default)
-result_95 = conversion_effect.analyze(..., confidence=95)
+result_95 = conversion.analyze(..., confidence=95)
 # Significant if p < 0.05
 
 # 99% confidence
-result_99 = conversion_effect.analyze(..., confidence=99)
+result_99 = conversion.analyze(..., confidence=99)
 # Significant if p < 0.01
 ```
 
@@ -112,7 +112,7 @@ P-values tell you: "Is there a difference?"
 Confidence intervals tell you: "How big is the difference?"
 
 ```python
-result = conversion_effect.analyze(...)
+result = conversion.analyze(...)
 
 # P-value approach
 if result.p_value < 0.05:
