@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import ReactMarkdown from 'react-markdown'
 
 function ConfidenceIntervalCalculator() {
   const [testType, setTestType] = useState('binary')
@@ -28,7 +29,7 @@ function ConfidenceIntervalCalculator() {
     
     const endpoint = testType === 'binary' 
       ? '/api/conversion/confidence-interval'
-      : '/api/numeric/confidence-interval'
+      : '/api/magnitude/confidence-interval'
     
     const payload = testType === 'binary'
       ? {
@@ -69,15 +70,15 @@ function ConfidenceIntervalCalculator() {
   return (
     <div>
       <div className="page-header">
-        <h1 className="page-title">Confidence Interval Calculator</h1>
+        <h1 className="page-title">Confidence Interval</h1>
         <p className="page-description">
-          Calculate the range where your true conversion rate or average value likely falls.
+          Calculate the range where your true metric likely falls.
         </p>
       </div>
 
       <div className="card">
-        <div className="card-title">What are you measuring?</div>
-        <div className="toggle-group" style={{ maxWidth: '500px' }}>
+        <div className="card-title">Metric Type</div>
+        <div className="toggle-group">
           <button 
             className={`toggle-option ${testType === 'binary' ? 'active' : ''}`}
             onClick={() => setTestType('binary')}
@@ -95,7 +96,7 @@ function ConfidenceIntervalCalculator() {
 
       <form onSubmit={handleSubmit}>
         <div className="card">
-          <div className="card-title">Your Data</div>
+          <div className="card-title">Data</div>
           <div className="form-grid">
             {testType === 'binary' ? (
               <>
@@ -136,14 +137,14 @@ function ConfidenceIntervalCalculator() {
                   />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Average Value</label>
+                  <label className="form-label">Mean</label>
                   <input
                     type="number"
                     name="mean"
                     className="form-input"
                     value={formData.mean}
                     onChange={handleChange}
-                    step="0.01"
+                    step="any"
                   />
                 </div>
                 <div className="form-group">
@@ -154,7 +155,7 @@ function ConfidenceIntervalCalculator() {
                     className="form-input"
                     value={formData.std}
                     onChange={handleChange}
-                    step="0.01"
+                    step="any"
                     min="0"
                   />
                 </div>
@@ -170,32 +171,22 @@ function ConfidenceIntervalCalculator() {
                 onChange={handleChange}
               >
                 <option value={90}>90%</option>
-                <option value={95}>95% (recommended)</option>
+                <option value={95}>95%</option>
                 <option value={99}>99%</option>
               </select>
             </div>
           </div>
 
           {testType === 'binary' && (
-            <div style={{ 
-              marginTop: '1.5rem',
-              padding: '1rem', 
-              background: 'var(--bg-tertiary)', 
-              borderRadius: 'var(--radius-md)',
-              textAlign: 'center'
-            }}>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>
-                Observed Conversion Rate
-              </div>
-              <div style={{ fontSize: '1.5rem', fontWeight: 700, fontFamily: 'var(--font-mono)' }}>
-                {(currentRate * 100).toFixed(2)}%
-              </div>
+            <div style={{ marginTop: '12px', padding: '8px 12px', background: 'var(--bg-hover)', borderRadius: 'var(--radius)', display: 'inline-block' }}>
+              <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>Current rate: </span>
+              <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 500 }}>{(currentRate * 100).toFixed(2)}%</span>
             </div>
           )}
 
-          <div style={{ marginTop: '2rem' }}>
+          <div style={{ marginTop: '24px' }}>
             <button type="submit" className="btn btn-primary" disabled={loading}>
-              {loading ? 'Calculating...' : 'Calculate Confidence Interval'}
+              {loading ? 'Calculating...' : 'Calculate'}
             </button>
           </div>
         </div>
@@ -206,48 +197,29 @@ function ConfidenceIntervalCalculator() {
       )}
 
       {result && (
-        <div className="card results-card">
-          <div className="card-title">📊 {result.confidence}% Confidence Interval</div>
-          
-          <div style={{ 
-            padding: '2rem', 
-            background: 'var(--bg-tertiary)', 
-            borderRadius: 'var(--radius-md)',
-            textAlign: 'center',
-            marginBottom: '1.5rem'
-          }}>
-            <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
-              The true value is between:
+        <div className="results-card">
+          <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '8px' }}>
+              {result.confidence}% Confidence Interval
             </div>
-            <div style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'center', 
-              gap: '1rem',
-              fontSize: '1.5rem',
-              fontFamily: 'var(--font-mono)',
-              fontWeight: 700
-            }}>
-              <span style={{ color: 'var(--accent-primary)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px' }}>
+              <span style={{ fontSize: '24px', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
                 {testType === 'binary' 
                   ? `${(result.lower * 100).toFixed(2)}%`
                   : `$${result.lower.toFixed(2)}`
                 }
               </span>
-              <span style={{ color: 'var(--text-muted)', fontSize: '1rem' }}>to</span>
-              <span style={{ color: 'var(--accent-primary)' }}>
+              <span style={{ color: 'var(--text-muted)' }}>to</span>
+              <span style={{ fontSize: '24px', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
                 {testType === 'binary' 
                   ? `${(result.upper * 100).toFixed(2)}%`
                   : `$${result.upper.toFixed(2)}`
                 }
               </span>
             </div>
-            <div style={{ marginTop: '1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-              with {result.confidence}% confidence
-            </div>
           </div>
 
-          <div className="ci-bar" style={{ height: '50px', marginBottom: '0.5rem' }}>
+          <div className="ci-bar">
             {(() => {
               const range = testType === 'binary' ? 1 : Math.max(result.upper * 1.5, result.mean * 2)
               const lowerPos = (result.lower / range) * 100
@@ -256,25 +228,16 @@ function ConfidenceIntervalCalculator() {
               
               return (
                 <>
-                  <div 
-                    className="ci-bar-fill" 
-                    style={{ 
-                      left: `${lowerPos}%`, 
-                      width: `${upperPos - lowerPos}%` 
-                    }} 
-                  />
-                  <div 
-                    className="ci-bar-point" 
-                    style={{ left: `${pointPos}%` }} 
-                  />
+                  <div className="ci-bar-fill" style={{ left: `${lowerPos}%`, width: `${upperPos - lowerPos}%` }} />
+                  <div className="ci-bar-point" style={{ left: `${pointPos}%` }} />
                 </>
               )
             })()}
           </div>
 
-          <div className="result-grid" style={{ marginTop: '1.5rem' }}>
+          <div className="result-grid" style={{ marginTop: '24px' }}>
             <div className="result-item">
-              <div className="result-label">Observed Value</div>
+              <div className="result-label">Observed</div>
               <div className="result-value">
                 {testType === 'binary' 
                   ? `${(result.rate * 100).toFixed(2)}%`
@@ -293,25 +256,14 @@ function ConfidenceIntervalCalculator() {
             </div>
           </div>
 
-          <div className="interpretation">
-            <div className="interpretation-title">What This Means</div>
-            <p className="interpretation-text">
+          <div className="callout callout-info" style={{ marginTop: '16px' }}>
+            <div className="callout-text">
               {testType === 'binary' ? (
-                <>
-                  Based on {formData.visitors.toLocaleString()} visitors with {formData.conversions.toLocaleString()} conversions,
-                  we're {result.confidence}% confident that your true conversion rate is between{' '}
-                  <strong>{(result.lower * 100).toFixed(2)}%</strong> and{' '}
-                  <strong>{(result.upper * 100).toFixed(2)}%</strong>.
-                </>
+                <>Based on {formData.visitors.toLocaleString()} visitors, we're {result.confidence}% confident the true conversion rate is between {(result.lower * 100).toFixed(2)}% and {(result.upper * 100).toFixed(2)}%.</>
               ) : (
-                <>
-                  Based on {formData.visitors.toLocaleString()} observations,
-                  we're {result.confidence}% confident that your true average is between{' '}
-                  <strong>${result.lower.toFixed(2)}</strong> and{' '}
-                  <strong>${result.upper.toFixed(2)}</strong>.
-                </>
+                <>Based on {formData.visitors.toLocaleString()} observations, we're {result.confidence}% confident the true average is between ${result.lower.toFixed(2)} and ${result.upper.toFixed(2)}.</>
               )}
-            </p>
+            </div>
           </div>
         </div>
       )}

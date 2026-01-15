@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 from typing import Literal, Optional, List
 import os
 
-from pyexptest import conversion_effect, numeric_effect
+from pyexptest.effects.outcome import conversion, magnitude, timing
 
 app = FastAPI(
     title="pyexptest API",
@@ -60,7 +60,7 @@ class ConversionConfidenceIntervalRequest(BaseModel):
     confidence: int = Field(95, ge=80, le=99, description="Confidence level")
 
 
-class NumericSampleSizeRequest(BaseModel):
+class MagnitudeSampleSizeRequest(BaseModel):
     current_mean: float = Field(..., description="Current average value (e.g., $50)")
     current_std: float = Field(..., gt=0, description="Standard deviation")
     lift_percent: float = Field(5, description="Minimum lift to detect in % (e.g., 5 for 5%)")
@@ -70,7 +70,7 @@ class NumericSampleSizeRequest(BaseModel):
     num_variants: int = Field(2, ge=2, le=10, description="Number of variants including control")
 
 
-class NumericAnalyzeRequest(BaseModel):
+class MagnitudeAnalyzeRequest(BaseModel):
     control_visitors: int = Field(..., gt=0, description="Number of visitors in control")
     control_mean: float = Field(..., description="Average value in control")
     control_std: float = Field(..., ge=0, description="Standard deviation in control")
@@ -83,15 +83,15 @@ class NumericAnalyzeRequest(BaseModel):
     currency: str = Field("$", description="Currency symbol")
 
 
-class NumericVariant(BaseModel):
+class MagnitudeVariant(BaseModel):
     name: str = Field(..., description="Variant name (e.g., 'control', 'variant_a')")
     visitors: int = Field(..., gt=0, description="Sample size")
     mean: float = Field(..., description="Average value")
     std: float = Field(..., ge=0, description="Standard deviation")
 
 
-class NumericMultiAnalyzeRequest(BaseModel):
-    variants: List[NumericVariant] = Field(..., min_length=2, description="List of variants")
+class MagnitudeMultiAnalyzeRequest(BaseModel):
+    variants: List[MagnitudeVariant] = Field(..., min_length=2, description="List of variants")
     confidence: int = Field(95, ge=80, le=99, description="Confidence level (80-99)")
     correction: Literal["bonferroni", "none"] = Field("bonferroni", description="Multiple comparison correction")
     test_name: str = Field("Multi-Variant Test", description="Name for the summary report")
@@ -99,11 +99,43 @@ class NumericMultiAnalyzeRequest(BaseModel):
     currency: str = Field("$", description="Currency symbol")
 
 
-class NumericConfidenceIntervalRequest(BaseModel):
+class MagnitudeConfidenceIntervalRequest(BaseModel):
     visitors: int = Field(..., gt=1, description="Sample size")
     mean: float = Field(..., description="Sample mean")
     std: float = Field(..., ge=0, description="Standard deviation")
     confidence: int = Field(95, ge=80, le=99, description="Confidence level")
+
+
+class ConversionDiffInDiffRequest(BaseModel):
+    control_pre_visitors: int = Field(..., gt=0, description="Control group pre-period visitors")
+    control_pre_conversions: int = Field(..., ge=0, description="Control group pre-period conversions")
+    control_post_visitors: int = Field(..., gt=0, description="Control group post-period visitors")
+    control_post_conversions: int = Field(..., ge=0, description="Control group post-period conversions")
+    treatment_pre_visitors: int = Field(..., gt=0, description="Treatment group pre-period visitors")
+    treatment_pre_conversions: int = Field(..., ge=0, description="Treatment group pre-period conversions")
+    treatment_post_visitors: int = Field(..., gt=0, description="Treatment group post-period visitors")
+    treatment_post_conversions: int = Field(..., ge=0, description="Treatment group post-period conversions")
+    confidence: int = Field(95, ge=80, le=99, description="Confidence level (80-99)")
+    test_name: str = Field("Difference-in-Differences Analysis", description="Name for the summary report")
+
+
+class MagnitudeDiffInDiffRequest(BaseModel):
+    control_pre_n: int = Field(..., gt=0, description="Control group pre-period sample size")
+    control_pre_mean: float = Field(..., description="Control group pre-period mean")
+    control_pre_std: float = Field(..., ge=0, description="Control group pre-period std dev")
+    control_post_n: int = Field(..., gt=0, description="Control group post-period sample size")
+    control_post_mean: float = Field(..., description="Control group post-period mean")
+    control_post_std: float = Field(..., ge=0, description="Control group post-period std dev")
+    treatment_pre_n: int = Field(..., gt=0, description="Treatment group pre-period sample size")
+    treatment_pre_mean: float = Field(..., description="Treatment group pre-period mean")
+    treatment_pre_std: float = Field(..., ge=0, description="Treatment group pre-period std dev")
+    treatment_post_n: int = Field(..., gt=0, description="Treatment group post-period sample size")
+    treatment_post_mean: float = Field(..., description="Treatment group post-period mean")
+    treatment_post_std: float = Field(..., ge=0, description="Treatment group post-period std dev")
+    confidence: int = Field(95, ge=80, le=99, description="Confidence level (80-99)")
+    test_name: str = Field("Difference-in-Differences Analysis", description="Name for the summary report")
+    metric_name: str = Field("Average Value", description="Name of the metric")
+    currency: str = Field("$", description="Currency symbol")
 
 
 @app.get("/api/health")
@@ -118,7 +150,7 @@ def conversion_sample_size(request: ConversionSampleSizeRequest):
         if rate > 1:
             rate = rate / 100
         
-        plan = conversion_effect.sample_size(
+        plan = conversion.sample_size(
             current_rate=rate,
             lift_percent=request.lift_percent,
             confidence=request.confidence,
@@ -146,7 +178,7 @@ def conversion_sample_size(request: ConversionSampleSizeRequest):
 @app.post("/api/conversion/analyze")
 def conversion_analyze(request: ConversionAnalyzeRequest):
     try:
-        result = conversion_effect.analyze(
+        result = conversion.analyze(
             control_visitors=request.control_visitors,
             control_conversions=request.control_conversions,
             variant_visitors=request.variant_visitors,
@@ -155,16 +187,16 @@ def conversion_analyze(request: ConversionAnalyzeRequest):
         )
         
         return {
-            "control_rate": result.control_rate,
-            "variant_rate": result.variant_rate,
-            "lift_percent": result.lift_percent,
-            "lift_absolute": result.lift_absolute,
-            "is_significant": result.is_significant,
-            "confidence": result.confidence,
-            "p_value": result.p_value,
-            "confidence_interval": [result.confidence_interval_lower, result.confidence_interval_upper],
-            "winner": result.winner,
-            "recommendation": result.recommendation,
+            "control_rate": float(result.control_rate),
+            "variant_rate": float(result.variant_rate),
+            "lift_percent": float(result.lift_percent),
+            "lift_absolute": float(result.lift_absolute),
+            "is_significant": bool(result.is_significant),
+            "confidence": int(result.confidence),
+            "p_value": float(result.p_value),
+            "confidence_interval": [float(result.confidence_interval_lower), float(result.confidence_interval_upper)],
+            "winner": str(result.winner),
+            "recommendation": str(result.recommendation),
         }
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -175,40 +207,40 @@ def conversion_analyze_multi(request: ConversionMultiAnalyzeRequest):
     try:
         variants = [{"name": v.name, "visitors": v.visitors, "conversions": v.conversions} for v in request.variants]
         
-        result = conversion_effect.analyze_multi(
+        result = conversion.analyze_multi(
             variants=variants,
             confidence=request.confidence,
             correction=request.correction,
         )
         
         return {
-            "is_significant": result.is_significant,
-            "confidence": result.confidence,
-            "p_value": result.p_value,
-            "test_statistic": result.test_statistic,
-            "degrees_of_freedom": result.degrees_of_freedom,
-            "best_variant": result.best_variant,
-            "worst_variant": result.worst_variant,
+            "is_significant": bool(result.is_significant),
+            "confidence": int(result.confidence),
+            "p_value": float(result.p_value),
+            "test_statistic": float(result.test_statistic),
+            "degrees_of_freedom": int(result.degrees_of_freedom),
+            "best_variant": str(result.best_variant),
+            "worst_variant": str(result.worst_variant),
             "variants": [
-                {"name": v.name, "visitors": v.visitors, "conversions": v.conversions, "rate": v.rate}
+                {"name": str(v.name), "visitors": int(v.visitors), "conversions": int(v.conversions), "rate": float(v.rate)}
                 for v in result.variants
             ],
             "pairwise_comparisons": [
                 {
-                    "variant_a": p.variant_a,
-                    "variant_b": p.variant_b,
-                    "rate_a": p.rate_a,
-                    "rate_b": p.rate_b,
-                    "lift_percent": p.lift_percent,
-                    "lift_absolute": p.lift_absolute,
-                    "p_value": p.p_value,
-                    "p_value_adjusted": p.p_value_adjusted,
-                    "is_significant": p.is_significant,
-                    "confidence_interval": [p.confidence_interval_lower, p.confidence_interval_upper],
+                    "variant_a": str(p.variant_a),
+                    "variant_b": str(p.variant_b),
+                    "rate_a": float(p.rate_a),
+                    "rate_b": float(p.rate_b),
+                    "lift_percent": float(p.lift_percent),
+                    "lift_absolute": float(p.lift_absolute),
+                    "p_value": float(p.p_value),
+                    "p_value_adjusted": float(p.p_value_adjusted),
+                    "is_significant": bool(p.is_significant),
+                    "confidence_interval": [float(p.confidence_interval_lower), float(p.confidence_interval_upper)],
                 }
                 for p in result.pairwise_comparisons
             ],
-            "recommendation": result.recommendation,
+            "recommendation": str(result.recommendation),
         }
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -219,12 +251,12 @@ def conversion_analyze_multi_summary(request: ConversionMultiAnalyzeRequest):
     try:
         variants = [{"name": v.name, "visitors": v.visitors, "conversions": v.conversions} for v in request.variants]
         
-        result = conversion_effect.analyze_multi(
+        result = conversion.analyze_multi(
             variants=variants,
             confidence=request.confidence,
             correction=request.correction,
         )
-        return conversion_effect.summarize_multi(result, test_name=request.test_name)
+        return conversion.summarize_multi(result, test_name=request.test_name)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -232,14 +264,14 @@ def conversion_analyze_multi_summary(request: ConversionMultiAnalyzeRequest):
 @app.post("/api/conversion/analyze/summary", response_class=PlainTextResponse)
 def conversion_analyze_summary(request: ConversionAnalyzeRequest):
     try:
-        result = conversion_effect.analyze(
+        result = conversion.analyze(
             control_visitors=request.control_visitors,
             control_conversions=request.control_conversions,
             variant_visitors=request.variant_visitors,
             variant_conversions=request.variant_conversions,
             confidence=request.confidence,
         )
-        return conversion_effect.summarize(result, test_name=request.test_name)
+        return conversion.summarize(result, test_name=request.test_name)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -251,7 +283,7 @@ def conversion_sample_size_summary(request: ConversionSampleSizeRequest):
         if rate > 1:
             rate = rate / 100
         
-        plan = conversion_effect.sample_size(
+        plan = conversion.sample_size(
             current_rate=rate,
             lift_percent=request.lift_percent,
             confidence=request.confidence,
@@ -262,7 +294,7 @@ def conversion_sample_size_summary(request: ConversionSampleSizeRequest):
         if request.daily_visitors:
             plan.with_daily_traffic(request.daily_visitors)
         
-        return conversion_effect.summarize_plan(plan)
+        return conversion.summarize_plan(plan)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -270,7 +302,7 @@ def conversion_sample_size_summary(request: ConversionSampleSizeRequest):
 @app.post("/api/conversion/confidence-interval")
 def conversion_confidence_interval(request: ConversionConfidenceIntervalRequest):
     try:
-        result = conversion_effect.confidence_interval(
+        result = conversion.confidence_interval(
             visitors=request.visitors,
             conversions=request.conversions,
             confidence=request.confidence,
@@ -286,10 +318,10 @@ def conversion_confidence_interval(request: ConversionConfidenceIntervalRequest)
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@app.post("/api/numeric/sample-size")
-def numeric_sample_size(request: NumericSampleSizeRequest):
+@app.post("/api/magnitude/sample-size")
+def magnitude_sample_size(request: MagnitudeSampleSizeRequest):
     try:
-        plan = numeric_effect.sample_size(
+        plan = magnitude.sample_size(
             current_mean=request.current_mean,
             current_std=request.current_std,
             lift_percent=request.lift_percent,
@@ -316,10 +348,10 @@ def numeric_sample_size(request: NumericSampleSizeRequest):
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@app.post("/api/numeric/analyze")
-def numeric_analyze(request: NumericAnalyzeRequest):
+@app.post("/api/magnitude/analyze")
+def magnitude_analyze(request: MagnitudeAnalyzeRequest):
     try:
-        result = numeric_effect.analyze(
+        result = magnitude.analyze(
             control_visitors=request.control_visitors,
             control_mean=request.control_mean,
             control_std=request.control_std,
@@ -330,77 +362,77 @@ def numeric_analyze(request: NumericAnalyzeRequest):
         )
         
         return {
-            "control_mean": result.control_mean,
-            "variant_mean": result.variant_mean,
-            "lift_percent": result.lift_percent,
-            "lift_absolute": result.lift_absolute,
-            "is_significant": result.is_significant,
-            "confidence": result.confidence,
-            "p_value": result.p_value,
-            "confidence_interval": [result.confidence_interval_lower, result.confidence_interval_upper],
-            "winner": result.winner,
-            "recommendation": result.recommendation,
+            "control_mean": float(result.control_mean),
+            "variant_mean": float(result.variant_mean),
+            "lift_percent": float(result.lift_percent),
+            "lift_absolute": float(result.lift_absolute),
+            "is_significant": bool(result.is_significant),
+            "confidence": int(result.confidence),
+            "p_value": float(result.p_value),
+            "confidence_interval": [float(result.confidence_interval_lower), float(result.confidence_interval_upper)],
+            "winner": str(result.winner),
+            "recommendation": str(result.recommendation),
         }
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@app.post("/api/numeric/analyze-multi")
-def numeric_analyze_multi(request: NumericMultiAnalyzeRequest):
+@app.post("/api/magnitude/analyze-multi")
+def magnitude_analyze_multi(request: MagnitudeMultiAnalyzeRequest):
     try:
         variants = [{"name": v.name, "visitors": v.visitors, "mean": v.mean, "std": v.std} for v in request.variants]
         
-        result = numeric_effect.analyze_multi(
+        result = magnitude.analyze_multi(
             variants=variants,
             confidence=request.confidence,
             correction=request.correction,
         )
         
         return {
-            "is_significant": result.is_significant,
-            "confidence": result.confidence,
-            "p_value": result.p_value,
-            "f_statistic": result.f_statistic,
-            "df_between": result.df_between,
-            "df_within": result.df_within,
-            "best_variant": result.best_variant,
-            "worst_variant": result.worst_variant,
+            "is_significant": bool(result.is_significant),
+            "confidence": int(result.confidence),
+            "p_value": float(result.p_value),
+            "f_statistic": float(result.f_statistic),
+            "df_between": int(result.df_between),
+            "df_within": int(result.df_within),
+            "best_variant": str(result.best_variant),
+            "worst_variant": str(result.worst_variant),
             "variants": [
-                {"name": v.name, "visitors": v.visitors, "mean": v.mean, "std": v.std}
+                {"name": str(v.name), "visitors": int(v.visitors), "mean": float(v.mean), "std": float(v.std)}
                 for v in result.variants
             ],
             "pairwise_comparisons": [
                 {
-                    "variant_a": p.variant_a,
-                    "variant_b": p.variant_b,
-                    "mean_a": p.mean_a,
-                    "mean_b": p.mean_b,
-                    "lift_percent": p.lift_percent,
-                    "lift_absolute": p.lift_absolute,
-                    "p_value": p.p_value,
-                    "p_value_adjusted": p.p_value_adjusted,
-                    "is_significant": p.is_significant,
-                    "confidence_interval": [p.confidence_interval_lower, p.confidence_interval_upper],
+                    "variant_a": str(p.variant_a),
+                    "variant_b": str(p.variant_b),
+                    "mean_a": float(p.mean_a),
+                    "mean_b": float(p.mean_b),
+                    "lift_percent": float(p.lift_percent),
+                    "lift_absolute": float(p.lift_absolute),
+                    "p_value": float(p.p_value),
+                    "p_value_adjusted": float(p.p_value_adjusted),
+                    "is_significant": bool(p.is_significant),
+                    "confidence_interval": [float(p.confidence_interval_lower), float(p.confidence_interval_upper)],
                 }
                 for p in result.pairwise_comparisons
             ],
-            "recommendation": result.recommendation,
+            "recommendation": str(result.recommendation),
         }
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@app.post("/api/numeric/analyze-multi/summary", response_class=PlainTextResponse)
-def numeric_analyze_multi_summary(request: NumericMultiAnalyzeRequest):
+@app.post("/api/magnitude/analyze-multi/summary", response_class=PlainTextResponse)
+def magnitude_analyze_multi_summary(request: MagnitudeMultiAnalyzeRequest):
     try:
         variants = [{"name": v.name, "visitors": v.visitors, "mean": v.mean, "std": v.std} for v in request.variants]
         
-        result = numeric_effect.analyze_multi(
+        result = magnitude.analyze_multi(
             variants=variants,
             confidence=request.confidence,
             correction=request.correction,
         )
-        return numeric_effect.summarize_multi(
+        return magnitude.summarize_multi(
             result,
             test_name=request.test_name,
             metric_name=request.metric_name,
@@ -410,10 +442,10 @@ def numeric_analyze_multi_summary(request: NumericMultiAnalyzeRequest):
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@app.post("/api/numeric/analyze/summary", response_class=PlainTextResponse)
-def numeric_analyze_summary(request: NumericAnalyzeRequest):
+@app.post("/api/magnitude/analyze/summary", response_class=PlainTextResponse)
+def magnitude_analyze_summary(request: MagnitudeAnalyzeRequest):
     try:
-        result = numeric_effect.analyze(
+        result = magnitude.analyze(
             control_visitors=request.control_visitors,
             control_mean=request.control_mean,
             control_std=request.control_std,
@@ -422,7 +454,7 @@ def numeric_analyze_summary(request: NumericAnalyzeRequest):
             variant_std=request.variant_std,
             confidence=request.confidence,
         )
-        return numeric_effect.summarize(
+        return magnitude.summarize(
             result, 
             test_name=request.test_name,
             metric_name=request.metric_name,
@@ -432,10 +464,10 @@ def numeric_analyze_summary(request: NumericAnalyzeRequest):
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@app.post("/api/numeric/sample-size/summary", response_class=PlainTextResponse)
-def numeric_sample_size_summary(request: NumericSampleSizeRequest):
+@app.post("/api/magnitude/sample-size/summary", response_class=PlainTextResponse)
+def magnitude_sample_size_summary(request: MagnitudeSampleSizeRequest):
     try:
-        plan = numeric_effect.sample_size(
+        plan = magnitude.sample_size(
             current_mean=request.current_mean,
             current_std=request.current_std,
             lift_percent=request.lift_percent,
@@ -447,15 +479,15 @@ def numeric_sample_size_summary(request: NumericSampleSizeRequest):
         if request.daily_visitors:
             plan.with_daily_traffic(request.daily_visitors)
         
-        return numeric_effect.summarize_plan(plan)
+        return magnitude.summarize_plan(plan)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@app.post("/api/numeric/confidence-interval")
-def numeric_confidence_interval(request: NumericConfidenceIntervalRequest):
+@app.post("/api/magnitude/confidence-interval")
+def magnitude_confidence_interval(request: MagnitudeConfidenceIntervalRequest):
     try:
-        result = numeric_effect.confidence_interval(
+        result = magnitude.confidence_interval(
             visitors=request.visitors,
             mean=request.mean,
             std=request.std,
@@ -468,6 +500,314 @@ def numeric_confidence_interval(request: NumericConfidenceIntervalRequest):
             "confidence": result.confidence,
             "margin_of_error": result.margin_of_error,
         }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/api/conversion/diff-in-diff")
+def conversion_diff_in_diff(request: ConversionDiffInDiffRequest):
+    try:
+        result = conversion.diff_in_diff(
+            control_pre_visitors=request.control_pre_visitors,
+            control_pre_conversions=request.control_pre_conversions,
+            control_post_visitors=request.control_post_visitors,
+            control_post_conversions=request.control_post_conversions,
+            treatment_pre_visitors=request.treatment_pre_visitors,
+            treatment_pre_conversions=request.treatment_pre_conversions,
+            treatment_post_visitors=request.treatment_post_visitors,
+            treatment_post_conversions=request.treatment_post_conversions,
+            confidence=request.confidence,
+        )
+        
+        return {
+            "control_pre_rate": float(result.control_pre_rate),
+            "control_post_rate": float(result.control_post_rate),
+            "treatment_pre_rate": float(result.treatment_pre_rate),
+            "treatment_post_rate": float(result.treatment_post_rate),
+            "control_change": float(result.control_change),
+            "treatment_change": float(result.treatment_change),
+            "diff_in_diff": float(result.diff_in_diff),
+            "diff_in_diff_percent": float(result.diff_in_diff_percent),
+            "is_significant": bool(result.is_significant),
+            "confidence": int(result.confidence),
+            "p_value": float(result.p_value),
+            "z_statistic": float(result.z_statistic),
+            "confidence_interval": [float(result.confidence_interval_lower), float(result.confidence_interval_upper)],
+            "recommendation": str(result.recommendation),
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/api/conversion/diff-in-diff/summary", response_class=PlainTextResponse)
+def conversion_diff_in_diff_summary(request: ConversionDiffInDiffRequest):
+    try:
+        result = conversion.diff_in_diff(
+            control_pre_visitors=request.control_pre_visitors,
+            control_pre_conversions=request.control_pre_conversions,
+            control_post_visitors=request.control_post_visitors,
+            control_post_conversions=request.control_post_conversions,
+            treatment_pre_visitors=request.treatment_pre_visitors,
+            treatment_pre_conversions=request.treatment_pre_conversions,
+            treatment_post_visitors=request.treatment_post_visitors,
+            treatment_post_conversions=request.treatment_post_conversions,
+            confidence=request.confidence,
+        )
+        return conversion.summarize_diff_in_diff(result, test_name=request.test_name)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/api/magnitude/diff-in-diff")
+def magnitude_diff_in_diff(request: MagnitudeDiffInDiffRequest):
+    try:
+        result = magnitude.diff_in_diff(
+            control_pre_n=request.control_pre_n,
+            control_pre_mean=request.control_pre_mean,
+            control_pre_std=request.control_pre_std,
+            control_post_n=request.control_post_n,
+            control_post_mean=request.control_post_mean,
+            control_post_std=request.control_post_std,
+            treatment_pre_n=request.treatment_pre_n,
+            treatment_pre_mean=request.treatment_pre_mean,
+            treatment_pre_std=request.treatment_pre_std,
+            treatment_post_n=request.treatment_post_n,
+            treatment_post_mean=request.treatment_post_mean,
+            treatment_post_std=request.treatment_post_std,
+            confidence=request.confidence,
+        )
+        
+        return {
+            "control_pre_mean": float(result.control_pre_mean),
+            "control_post_mean": float(result.control_post_mean),
+            "treatment_pre_mean": float(result.treatment_pre_mean),
+            "treatment_post_mean": float(result.treatment_post_mean),
+            "control_change": float(result.control_change),
+            "treatment_change": float(result.treatment_change),
+            "diff_in_diff": float(result.diff_in_diff),
+            "diff_in_diff_percent": float(result.diff_in_diff_percent),
+            "is_significant": bool(result.is_significant),
+            "confidence": int(result.confidence),
+            "p_value": float(result.p_value),
+            "t_statistic": float(result.t_statistic),
+            "degrees_of_freedom": float(result.degrees_of_freedom),
+            "confidence_interval": [float(result.confidence_interval_lower), float(result.confidence_interval_upper)],
+            "recommendation": str(result.recommendation),
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/api/magnitude/diff-in-diff/summary", response_class=PlainTextResponse)
+def magnitude_diff_in_diff_summary(request: MagnitudeDiffInDiffRequest):
+    try:
+        result = magnitude.diff_in_diff(
+            control_pre_n=request.control_pre_n,
+            control_pre_mean=request.control_pre_mean,
+            control_pre_std=request.control_pre_std,
+            control_post_n=request.control_post_n,
+            control_post_mean=request.control_post_mean,
+            control_post_std=request.control_post_std,
+            treatment_pre_n=request.treatment_pre_n,
+            treatment_pre_mean=request.treatment_pre_mean,
+            treatment_pre_std=request.treatment_pre_std,
+            treatment_post_n=request.treatment_post_n,
+            treatment_post_mean=request.treatment_post_mean,
+            treatment_post_std=request.treatment_post_std,
+            confidence=request.confidence,
+        )
+        return magnitude.summarize_diff_in_diff(
+            result,
+            test_name=request.test_name,
+            metric_name=request.metric_name,
+            currency=request.currency,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+class TimingAnalyzeRequest(BaseModel):
+    control_times: List[float] = Field(..., description="Time values for control group")
+    control_events: List[int] = Field(..., description="Event indicators for control (1=event, 0=censored)")
+    treatment_times: List[float] = Field(..., description="Time values for treatment group")
+    treatment_events: List[int] = Field(..., description="Event indicators for treatment (1=event, 0=censored)")
+    confidence: int = Field(95, ge=80, le=99, description="Confidence level")
+
+
+class TimingSampleSizeRequest(BaseModel):
+    control_median: float = Field(..., description="Expected median time for control group")
+    treatment_median: float = Field(..., description="Expected median time for treatment group")
+    confidence: int = Field(95, ge=80, le=99, description="Confidence level")
+    power: int = Field(80, ge=50, le=99, description="Statistical power")
+    dropout_rate: float = Field(0.1, ge=0, lt=1, description="Expected dropout/censoring rate")
+
+
+class TimingSurvivalCurveRequest(BaseModel):
+    times: List[float] = Field(..., description="Time values")
+    events: List[int] = Field(..., description="Event indicators (1=event, 0=censored)")
+    confidence: int = Field(95, ge=80, le=99, description="Confidence level")
+
+
+class TimingRateAnalyzeRequest(BaseModel):
+    control_events: int = Field(..., ge=0, description="Number of events in control group")
+    control_exposure: float = Field(..., gt=0, description="Total exposure time for control group")
+    treatment_events: int = Field(..., ge=0, description="Number of events in treatment group")
+    treatment_exposure: float = Field(..., gt=0, description="Total exposure time for treatment group")
+    confidence: int = Field(95, ge=80, le=99, description="Confidence level")
+
+
+class TimingSummaryRequest(BaseModel):
+    control_times: List[float]
+    control_events: List[int]
+    treatment_times: List[float]
+    treatment_events: List[int]
+    confidence: int = Field(95)
+    test_name: str = Field("Timing Effect Test")
+
+
+class TimingRateSummaryRequest(BaseModel):
+    control_events: int
+    control_exposure: float
+    treatment_events: int
+    treatment_exposure: float
+    confidence: int = Field(95)
+    test_name: str = Field("Event Rate Test")
+    unit: str = Field("events per day")
+
+
+@app.post("/api/timing/analyze")
+def timing_analyze(request: TimingAnalyzeRequest):
+    try:
+        result = timing.analyze(
+            control_times=request.control_times,
+            control_events=request.control_events,
+            treatment_times=request.treatment_times,
+            treatment_events=request.treatment_events,
+            confidence=request.confidence,
+        )
+        return {
+            "control_median_time": result.control_median_time,
+            "treatment_median_time": result.treatment_median_time,
+            "control_events": result.control_events,
+            "control_censored": result.control_censored,
+            "treatment_events": result.treatment_events,
+            "treatment_censored": result.treatment_censored,
+            "hazard_ratio": float(result.hazard_ratio),
+            "hazard_ratio_ci": [float(result.hazard_ratio_ci_lower), float(result.hazard_ratio_ci_upper)],
+            "time_saved": result.time_saved,
+            "time_saved_percent": result.time_saved_percent,
+            "is_significant": bool(result.is_significant),
+            "confidence": result.confidence,
+            "p_value": float(result.p_value),
+            "recommendation": result.recommendation,
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/api/timing/analyze/summary")
+def timing_analyze_summary(request: TimingSummaryRequest):
+    try:
+        result = timing.analyze(
+            control_times=request.control_times,
+            control_events=request.control_events,
+            treatment_times=request.treatment_times,
+            treatment_events=request.treatment_events,
+            confidence=request.confidence,
+        )
+        return PlainTextResponse(timing.summarize(result, test_name=request.test_name))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/api/timing/sample-size")
+def timing_sample_size(request: TimingSampleSizeRequest):
+    try:
+        plan = timing.sample_size(
+            control_median=request.control_median,
+            treatment_median=request.treatment_median,
+            confidence=request.confidence,
+            power=request.power,
+            dropout_rate=request.dropout_rate,
+        )
+        return {
+            "subjects_per_group": plan.subjects_per_group,
+            "total_subjects": plan.total_subjects,
+            "expected_events_per_group": plan.expected_events_per_group,
+            "total_expected_events": plan.total_expected_events,
+            "control_median": plan.control_median,
+            "treatment_median": plan.treatment_median,
+            "hazard_ratio": float(plan.hazard_ratio),
+            "confidence": plan.confidence,
+            "power": plan.power,
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/api/timing/survival-curve")
+def timing_survival_curve(request: TimingSurvivalCurveRequest):
+    try:
+        curve = timing.survival_curve(
+            times=request.times,
+            events=request.events,
+            confidence=request.confidence,
+        )
+        return {
+            "times": curve.times,
+            "survival_probabilities": curve.survival_probabilities,
+            "confidence_lower": curve.confidence_lower,
+            "confidence_upper": curve.confidence_upper,
+            "median_time": curve.median_time,
+            "events": curve.events,
+            "censored": curve.censored,
+            "total": curve.total,
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/api/timing/rates/analyze")
+def timing_rate_analyze(request: TimingRateAnalyzeRequest):
+    try:
+        result = timing.analyze_rates(
+            control_events=request.control_events,
+            control_exposure=request.control_exposure,
+            treatment_events=request.treatment_events,
+            treatment_exposure=request.treatment_exposure,
+            confidence=request.confidence,
+        )
+        return {
+            "control_rate": float(result.control_rate),
+            "treatment_rate": float(result.treatment_rate),
+            "control_events": result.control_events,
+            "control_exposure": float(result.control_exposure),
+            "treatment_events": result.treatment_events,
+            "treatment_exposure": float(result.treatment_exposure),
+            "rate_ratio": float(result.rate_ratio),
+            "rate_ratio_ci": [float(result.rate_ratio_ci_lower), float(result.rate_ratio_ci_upper)],
+            "rate_difference": float(result.rate_difference),
+            "rate_difference_percent": float(result.rate_difference_percent),
+            "is_significant": bool(result.is_significant),
+            "confidence": result.confidence,
+            "p_value": float(result.p_value),
+            "recommendation": result.recommendation,
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/api/timing/rates/analyze/summary")
+def timing_rate_analyze_summary(request: TimingRateSummaryRequest):
+    try:
+        result = timing.analyze_rates(
+            control_events=request.control_events,
+            control_exposure=request.control_exposure,
+            treatment_events=request.treatment_events,
+            treatment_exposure=request.treatment_exposure,
+            confidence=request.confidence,
+        )
+        return PlainTextResponse(timing.summarize_rates(result, test_name=request.test_name, unit=request.unit))
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import ReactMarkdown from 'react-markdown'
 
 function SampleSizeCalculator() {
   const [testType, setTestType] = useState('binary')
@@ -12,7 +13,6 @@ function SampleSizeCalculator() {
     current_std: 25,
   })
   const [result, setResult] = useState(null)
-  const [summary, setSummary] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
 
@@ -31,11 +31,7 @@ function SampleSizeCalculator() {
     
     const endpoint = testType === 'binary' 
       ? '/api/conversion/sample-size'
-      : '/api/numeric/sample-size'
-    
-    const summaryEndpoint = testType === 'binary'
-      ? '/api/conversion/sample-size/summary'
-      : '/api/numeric/sample-size/summary'
+      : '/api/magnitude/sample-size'
     
     const payload = testType === 'binary'
       ? {
@@ -55,29 +51,19 @@ function SampleSizeCalculator() {
         }
     
     try {
-      const [dataRes, summaryRes] = await Promise.all([
-        fetch(endpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        }),
-        fetch(summaryEndpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        })
-      ])
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
       
-      if (!dataRes.ok) {
-        const data = await dataRes.json()
+      if (!res.ok) {
+        const data = await res.json()
         throw new Error(data.detail || 'Calculation failed')
       }
       
-      const data = await dataRes.json()
-      const summaryText = await summaryRes.text()
-      
+      const data = await res.json()
       setResult(data)
-      setSummary(summaryText)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -85,20 +71,18 @@ function SampleSizeCalculator() {
     }
   }
 
-  const formatNumber = (val) => val?.toLocaleString() || '-'
-
   return (
     <div>
       <div className="page-header">
         <h1 className="page-title">Sample Size Calculator</h1>
         <p className="page-description">
-          Find out how many visitors you need to run a reliable A/B test.
+          Calculate how many visitors you need for a reliable A/B test.
         </p>
       </div>
 
       <div className="card">
-        <div className="card-title">What are you testing?</div>
-        <div className="toggle-group" style={{ maxWidth: '500px' }}>
+        <div className="card-title">Test Type</div>
+        <div className="toggle-group">
           <button 
             className={`toggle-option ${testType === 'binary' ? 'active' : ''}`}
             onClick={() => setTestType('binary')}
@@ -109,19 +93,14 @@ function SampleSizeCalculator() {
             className={`toggle-option ${testType === 'continuous' ? 'active' : ''}`}
             onClick={() => setTestType('continuous')}
           >
-            Revenue / Average Value
+            Revenue / AOV
           </button>
         </div>
-        <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '0.75rem' }}>
-          {testType === 'binary' 
-            ? 'Use this for click-through rates, sign-up rates, purchase rates, etc.' 
-            : 'Use this for average order value, revenue per user, time on page, etc.'}
-        </p>
       </div>
 
       <form onSubmit={handleSubmit}>
         <div className="card">
-          <div className="card-title">Your Current Numbers</div>
+          <div className="card-title">Parameters</div>
           <div className="form-grid">
             {testType === 'binary' ? (
               <div className="form-group">
@@ -132,12 +111,11 @@ function SampleSizeCalculator() {
                   className="form-input"
                   value={formData.current_rate}
                   onChange={handleChange}
-                  step="0.1"
+                  step="any"
                   min="0.01"
-                  max="100"
-                  placeholder="e.g., 5 for 5%"
+                  max="99"
+                  placeholder="5"
                 />
-                <span className="form-hint">What % of visitors currently convert?</span>
               </div>
             ) : (
               <>
@@ -149,10 +127,9 @@ function SampleSizeCalculator() {
                     className="form-input"
                     value={formData.current_mean}
                     onChange={handleChange}
-                    step="0.01"
-                    placeholder="e.g., 50"
+                    step="any"
+                    placeholder="50"
                   />
-                  <span className="form-hint">Current AOV, revenue, or metric value</span>
                 </div>
                 <div className="form-group">
                   <label className="form-label">Standard Deviation</label>
@@ -162,11 +139,10 @@ function SampleSizeCalculator() {
                     className="form-input"
                     value={formData.current_std}
                     onChange={handleChange}
-                    step="0.01"
+                    step="any"
                     min="0.01"
-                    placeholder="e.g., 25"
+                    placeholder="25"
                   />
-                  <span className="form-hint">How much does it vary? (ask your analyst)</span>
                 </div>
               </>
             )}
@@ -181,9 +157,8 @@ function SampleSizeCalculator() {
                 onChange={handleChange}
                 step="1"
                 min="1"
-                placeholder="e.g., 10"
+                placeholder="10"
               />
-              <span className="form-hint">Smallest improvement worth detecting</span>
             </div>
 
             <div className="form-group">
@@ -196,16 +171,10 @@ function SampleSizeCalculator() {
                 onChange={handleChange}
                 step="100"
                 min="1"
-                placeholder="e.g., 10000"
+                placeholder="10000"
               />
-              <span className="form-hint">To estimate test duration</span>
             </div>
-          </div>
-        </div>
 
-        <div className="card">
-          <div className="card-title">Statistical Settings</div>
-          <div className="form-grid">
             <div className="form-group">
               <label className="form-label">Confidence Level</label>
               <select
@@ -214,11 +183,10 @@ function SampleSizeCalculator() {
                 value={formData.confidence}
                 onChange={handleChange}
               >
-                <option value={90}>90% (faster, less certain)</option>
-                <option value={95}>95% (recommended)</option>
-                <option value={99}>99% (slower, more certain)</option>
+                <option value={90}>90%</option>
+                <option value={95}>95%</option>
+                <option value={99}>99%</option>
               </select>
-              <span className="form-hint">How sure do you want to be?</span>
             </div>
 
             <div className="form-group">
@@ -229,17 +197,16 @@ function SampleSizeCalculator() {
                 value={formData.power}
                 onChange={handleChange}
               >
-                <option value={70}>70% (risky)</option>
-                <option value={80}>80% (standard)</option>
-                <option value={90}>90% (conservative)</option>
+                <option value={70}>70%</option>
+                <option value={80}>80%</option>
+                <option value={90}>90%</option>
               </select>
-              <span className="form-hint">Chance of detecting a real effect</span>
             </div>
           </div>
 
-          <div style={{ marginTop: '2rem' }}>
+          <div style={{ marginTop: '24px' }}>
             <button type="submit" className="btn btn-primary" disabled={loading}>
-              {loading ? 'Calculating...' : 'Calculate Sample Size'}
+              {loading ? 'Calculating...' : 'Calculate'}
             </button>
           </div>
         </div>
@@ -250,60 +217,41 @@ function SampleSizeCalculator() {
       )}
 
       {result && (
-        <div className="card results-card">
-          <div className="card-title">📊 Results</div>
+        <div className="results-card">
           <div className="result-grid">
             <div className="result-item">
               <div className="result-label">Per Variant</div>
-              <div className="result-value">{formatNumber(result.visitors_per_variant)}</div>
+              <div className="result-value">{result.visitors_per_variant.toLocaleString()}</div>
               <div className="result-unit">visitors</div>
             </div>
             <div className="result-item">
-              <div className="result-label">Total Needed</div>
-              <div className="result-value">{formatNumber(result.total_visitors)}</div>
+              <div className="result-label">Total</div>
+              <div className="result-value">{result.total_visitors.toLocaleString()}</div>
               <div className="result-unit">visitors</div>
             </div>
             {result.test_duration_days && (
               <div className="result-item">
-                <div className="result-label">Estimated Duration</div>
-                <div className="result-value">
-                  {result.test_duration_days < 7 
-                    ? `${result.test_duration_days}` 
-                    : Math.ceil(result.test_duration_days / 7)}
-                </div>
-                <div className="result-unit">
-                  {result.test_duration_days < 7 ? 'days' : 'weeks'}
-                </div>
+                <div className="result-label">Duration</div>
+                <div className="result-value">{result.test_duration_days}</div>
+                <div className="result-unit">days</div>
               </div>
             )}
             <div className="result-item">
-              <div className="result-label">Expected Variant</div>
+              <div className="result-label">Expected Rate</div>
               <div className="result-value">
                 {testType === 'binary' 
-                  ? `${(result.expected_rate * 100).toFixed(2)}%`
-                  : `$${result.expected_mean?.toFixed(2)}`
+                  ? `${(result.expected_rate * 100).toFixed(1)}%`
+                  : `$${result.expected_mean?.toFixed(0)}`
                 }
               </div>
             </div>
           </div>
 
-          {summary && (
-            <div style={{ marginTop: '2rem' }}>
-              <div className="form-label" style={{ marginBottom: '0.5rem' }}>Summary for Stakeholders</div>
-              <pre style={{ 
-                background: 'var(--bg-tertiary)', 
-                padding: '1.5rem', 
-                borderRadius: 'var(--radius-md)',
-                fontSize: '0.85rem',
-                lineHeight: 1.6,
-                whiteSpace: 'pre-wrap',
-                fontFamily: 'var(--font-mono)',
-                overflow: 'auto'
-              }}>
-                {summary}
-              </pre>
+          <div className="callout callout-info" style={{ marginTop: '16px' }}>
+            <div className="callout-text">
+              If the variant improves by {result.lift_percent}% or more, this test has an {result.power}% chance of detecting it with {result.confidence}% confidence.
             </div>
-          )}
+          </div>
         </div>
       )}
     </div>

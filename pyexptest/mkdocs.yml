@@ -1,0 +1,88 @@
+site_name: pyexptest
+site_description: Simple A/B testing tools for marketers, analysts, and product teams
+site_url: https://pyexptest.readthedocs.io
+repo_url: https://github.com/pyexptest/pyexptest
+repo_name: pyexptest/pyexptest
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: blue
+      accent: blue
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: blue
+      accent: blue
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
+  icon:
+    repo: fontawesome/brands/github
+  logo: assets/logo.png
+  favicon: assets/favicon.png
+
+nav:
+  - Home: index.md
+  - Getting Started:
+    - Installation: getting-started/installation.md
+    - Quick Start: getting-started/quickstart.md
+  - User Guide:
+    - Sample Size Calculator: guide/sample-size.md
+    - Analyzing Results: guide/analyzing-results.md
+    - Multi-Variant Tests: guide/multi-variant.md
+    - Difference-in-Differences: guide/diff-in-diff.md
+    - Confidence Intervals: guide/confidence-intervals.md
+    - Understanding P-Values: guide/p-values.md
+  - API Reference:
+    - conversion: api/conversion.md
+    - magnitude: api/magnitude.md
+    - timing (coming soon): api/timing.md
+  - Examples:
+    - Conversion Rate Tests: examples/conversion.md
+    - Revenue Tests: examples/revenue.md
+    - Multi-Variant Tests: examples/multi-variant.md
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            show_source: false
+            show_root_heading: true
+            heading_level: 2
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - admonition
+  - pymdownx.details
+  - pymdownx.tabbed:
+      alternate_style: true
+  - tables
+  - attr_list
+  - md_in_html
+  - toc:
+      permalink: true
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/pyexptest/pyexptest
+    - icon: fontawesome/brands/python
+      link: https://pypi.org/project/pyexptest/

@@ -8,12 +8,11 @@ function App() {
     <div className="app-container">
       <nav className="sidebar">
         <div className="sidebar-header">
-          <div className="logo">pyexptest</div>
-          <div className="logo-subtitle">A/B Testing Made Simple</div>
+          <img src="/logo.png" alt="pyexptest" className="sidebar-logo" />
         </div>
         
         <div className="nav-section">
-          <div className="nav-section-title">Calculators</div>
+          <div className="nav-section-title">Tools</div>
           <NavLink 
             to="/" 
             className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
@@ -36,28 +35,6 @@ function App() {
             <span className="nav-icon">📏</span>
             Confidence Interval
           </NavLink>
-        </div>
-        
-        <div className="nav-section" style={{ marginTop: 'auto', paddingTop: '1rem', borderTop: '1px solid var(--border-color)' }}>
-          <div className="nav-section-title">Resources</div>
-          <a 
-            href="https://github.com/pyexptest/pyexptest" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="nav-link"
-          >
-            <span className="nav-icon">📦</span>
-            GitHub
-          </a>
-          <a 
-            href="https://pypi.org/project/pyexptest" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="nav-link"
-          >
-            <span className="nav-icon">🐍</span>
-            PyPI
-          </a>
         </div>
       </nav>
       

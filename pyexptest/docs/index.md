@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="static/logo.png" alt="pyexptest" width="400">
+  <img src="assets/logo.png" alt="pyexptest" width="400">
 </p>
 
 <p align="center">
@@ -228,86 +228,11 @@ report = conversion.summarize(result, test_name="Signup Button Test")
 print(report)
 ```
 
-Output:
-
-```markdown
-## 📊 Signup Button Test Results
-
-### ✅ Significant Result
-
-**The test variant performed significantly higher than the control.**
-
-- **Control conversion rate:** 5.00% (500 / 10,000)
-- **Variant conversion rate:** 6.00% (600 / 10,000)
-- **Relative lift:** +20.0% increase
-- **P-value:** 0.0003
-
-### 📝 What This Means
-
-With 95% confidence, the variant shows a **20.0%** improvement.
-```
-
----
-
-## API Reference
-
-### conversion module
-
-| Function | Purpose |
-|----------|---------|
-| `sample_size(current_rate, lift_percent, ...)` | Sample size calculation |
-| `analyze(control_visitors, control_conversions, ...)` | 2-variant test |
-| `analyze_multi(variants, ...)` | Multi-variant test (Chi-square) |
-| `diff_in_diff(...)` | Difference-in-Differences |
-| `confidence_interval(visitors, conversions, ...)` | CI for a rate |
-| `summarize(result, test_name)` | Markdown report |
-
-### magnitude module
-
-| Function | Purpose |
-|----------|---------|
-| `sample_size(current_mean, current_std, lift_percent, ...)` | Sample size calculation |
-| `analyze(control_visitors, control_mean, control_std, ...)` | 2-variant test (Welch's t) |
-| `analyze_multi(variants, ...)` | Multi-variant test (ANOVA) |
-| `diff_in_diff(...)` | Difference-in-Differences |
-| `confidence_interval(visitors, mean, std, ...)` | CI for a mean |
-| `summarize(result, test_name, metric_name, currency)` | Markdown report |
-
-### timing module *(coming soon)*
-
-| Function | Purpose |
-|----------|---------|
-| `analyze(...)` | Survival analysis |
-| `kaplan_meier(...)` | Survival curves |
-| `summarize(...)` | Markdown report |
-
----
-
-## Module Structure
-
-```
-pyexptest/
-  effects/
-    outcome/
-      conversion.py    # Whether it happens
-      magnitude.py     # How much it happens
-      timing.py        # When it happens (coming soon)
-```
-
----
-
-## Understanding P-Values
-
-| P-value | Interpretation |
-|---------|----------------|
-| < 0.01 | Very strong evidence |
-| 0.01 - 0.05 | Strong evidence (significant at 95%) |
-| 0.05 - 0.10 | Weak evidence |
-| > 0.10 | Not enough evidence |
-
 ---
 
 ## Web Interface
+
+pyexptest includes a web UI for those who prefer clicking over coding:
 
 ```bash
 pyexptest-server
