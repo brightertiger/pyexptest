@@ -53,6 +53,7 @@ nav:
     - Conversion Rate Tests: examples/conversion.md
     - Revenue Tests: examples/revenue.md
     - Multi-Variant Tests: examples/multi-variant.md
+    - Timing & Survival: examples/timing.md
 
 plugins:
   - search

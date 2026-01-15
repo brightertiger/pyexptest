@@ -22,7 +22,6 @@ const ANALYSIS_TYPES = {
 
 function TimingCalculator() {
   const [analysisType, setAnalysisType] = useState('rates')
-  const [mode, setMode] = useState('analyze')
   
   const [ratesData, setRatesData] = useState({
     control_events: 45,
@@ -39,14 +38,6 @@ function TimingCalculator() {
     treatment_times: '3, 6, 9, 12, 14, 16, 20, 24, 28, 32',
     treatment_events: '1, 1, 1, 1, 0, 1, 1, 0, 1, 1',
     confidence: 95,
-  })
-
-  const [sampleSizeData, setSampleSizeData] = useState({
-    control_median: 30,
-    treatment_median: 24,
-    confidence: 95,
-    power: 80,
-    dropout_rate: 10,
   })
 
   const [result, setResult] = useState(null)
@@ -69,14 +60,6 @@ function TimingCalculator() {
     }))
   }
 
-  const handleSampleSizeChange = (e) => {
-    const { name, value } = e.target
-    setSampleSizeData(prev => ({
-      ...prev,
-      [name]: parseFloat(value) || 0
-    }))
-  }
-
   const parseArray = (str) => {
     return str.split(',').map(s => parseFloat(s.trim())).filter(n => !isNaN(n))
   }
@@ -90,16 +73,7 @@ function TimingCalculator() {
     try {
       let endpoint, payload
 
-      if (mode === 'sample_size') {
-        endpoint = '/api/timing/sample-size'
-        payload = {
-          control_median: sampleSizeData.control_median,
-          treatment_median: sampleSizeData.treatment_median,
-          confidence: sampleSizeData.confidence,
-          power: sampleSizeData.power,
-          dropout_rate: sampleSizeData.dropout_rate / 100,
-        }
-      } else if (analysisType === 'rates') {
+      if (analysisType === 'rates') {
         endpoint = '/api/timing/rates/analyze'
         payload = {
           control_events: ratesData.control_events,
@@ -143,7 +117,7 @@ function TimingCalculator() {
       }
 
       const data = await res.json()
-      setResult({ ...data, type: mode === 'sample_size' ? 'sample_size' : analysisType })
+      setResult({ ...data, type: analysisType })
     } catch (err) {
       setError(err.message)
     } finally {
@@ -175,147 +149,30 @@ function TimingCalculator() {
       </div>
 
       <div className="card">
-        <div className="card-title">What do you want to do?</div>
-        <div className="tabs">
-          <button
-            type="button"
-            className={`tab ${mode === 'analyze' ? 'active' : ''}`}
-            onClick={() => { setMode('analyze'); setResult(null); }}
-          >
-            Analyze Results
-          </button>
-          <button
-            type="button"
-            className={`tab ${mode === 'sample_size' ? 'active' : ''}`}
-            onClick={() => { setMode('sample_size'); setResult(null); }}
-          >
-            Plan Sample Size
-          </button>
+        <div className="card-title">Analysis Type</div>
+        <div className="test-type-options">
+          {Object.values(ANALYSIS_TYPES).map((type) => (
+            <button
+              key={type.id}
+              type="button"
+              className={`test-type-option ${analysisType === type.id ? 'active' : ''}`}
+              onClick={() => { setAnalysisType(type.id); setResult(null); }}
+            >
+              <span className="test-type-icon">{type.icon}</span>
+              <div className="test-type-content">
+                <div className="test-type-label">{type.label}</div>
+                <div className="test-type-description">{type.description}</div>
+              </div>
+            </button>
+          ))}
+        </div>
+        <div className="test-type-example">
+          <span className="example-label">Example:</span> {ANALYSIS_TYPES[analysisType].examples}
         </div>
       </div>
 
-      {mode === 'analyze' && (
-        <div className="card">
-          <div className="card-title">Analysis Type</div>
-          <div className="test-type-options">
-            {Object.values(ANALYSIS_TYPES).map((type) => (
-              <button
-                key={type.id}
-                type="button"
-                className={`test-type-option ${analysisType === type.id ? 'active' : ''}`}
-                onClick={() => { setAnalysisType(type.id); setResult(null); }}
-              >
-                <span className="test-type-icon">{type.icon}</span>
-                <div className="test-type-content">
-                  <div className="test-type-label">{type.label}</div>
-                  <div className="test-type-description">{type.description}</div>
-                </div>
-              </button>
-            ))}
-          </div>
-          <div className="test-type-example">
-            <span className="example-label">Example:</span> {ANALYSIS_TYPES[analysisType].examples}
-          </div>
-        </div>
-      )}
-
       <form onSubmit={handleSubmit}>
-        {mode === 'sample_size' ? (
-          <div className="card">
-            <div className="card-title">Expected Median Times</div>
-            <div className="form-grid">
-              <FormField
-                label="Control Group Median Time"
-                hint="Expected median time-to-event for control group"
-                required
-              >
-                <input
-                  type="number"
-                  name="control_median"
-                  className="form-input"
-                  value={sampleSizeData.control_median}
-                  onChange={handleSampleSizeChange}
-                  step="any"
-                  min="0.01"
-                />
-              </FormField>
-              <FormField
-                label="Treatment Group Median Time"
-                hint="Expected median time-to-event for treatment group"
-                required
-              >
-                <input
-                  type="number"
-                  name="treatment_median"
-                  className="form-input"
-                  value={sampleSizeData.treatment_median}
-                  onChange={handleSampleSizeChange}
-                  step="any"
-                  min="0.01"
-                />
-              </FormField>
-              <FormField
-                label="Confidence Level"
-                hint="Higher confidence = more subjects needed"
-              >
-                <select
-                  name="confidence"
-                  className="form-select"
-                  value={sampleSizeData.confidence}
-                  onChange={handleSampleSizeChange}
-                >
-                  <option value={90}>90%</option>
-                  <option value={95}>95%</option>
-                  <option value={99}>99%</option>
-                </select>
-              </FormField>
-              <FormField
-                label="Statistical Power"
-                hint="Probability of detecting a real effect"
-              >
-                <select
-                  name="power"
-                  className="form-select"
-                  value={sampleSizeData.power}
-                  onChange={handleSampleSizeChange}
-                >
-                  <option value={70}>70%</option>
-                  <option value={80}>80%</option>
-                  <option value={90}>90%</option>
-                </select>
-              </FormField>
-              <FormField
-                label="Expected Dropout Rate (%)"
-                hint="Percentage of subjects expected to drop out before the event"
-              >
-                <input
-                  type="number"
-                  name="dropout_rate"
-                  className="form-input"
-                  value={sampleSizeData.dropout_rate}
-                  onChange={handleSampleSizeChange}
-                  step="1"
-                  min="0"
-                  max="90"
-                />
-              </FormField>
-            </div>
-            <div style={{ marginTop: '16px', padding: '12px', background: 'var(--bg-secondary)', borderRadius: 'var(--radius)' }}>
-              <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>Expected hazard ratio: </span>
-              <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
-                {(sampleSizeData.control_median / sampleSizeData.treatment_median).toFixed(3)}
-              </span>
-              <span style={{ color: 'var(--text-muted)', fontSize: '12px', marginLeft: '8px' }}>
-                ({sampleSizeData.treatment_median < sampleSizeData.control_median ? 'faster in treatment' : 'slower in treatment'})
-              </span>
-            </div>
-            <div style={{ marginTop: '24px' }}>
-              <button type="submit" className="btn btn-primary" disabled={loading}>
-                {loading ? 'Calculating...' : 'Calculate Sample Size'}
-              </button>
-            </div>
-          </div>
-        ) : analysisType === 'rates' ? (
+        {analysisType === 'rates' ? (
           <>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
               <div className="variant-card">
@@ -534,57 +391,6 @@ function TimingCalculator() {
 
       {error && (
         <div className="error-message">{error}</div>
-      )}
-
-      {result && result.type === 'sample_size' && (
-        <div className="results-card">
-          <div className="result-grid">
-            <div className="result-item">
-              <div className="result-label">Per Group</div>
-              <div className="result-value">{result.subjects_per_group.toLocaleString()}</div>
-              <div className="result-unit">subjects</div>
-            </div>
-            <div className="result-item">
-              <div className="result-label">Total</div>
-              <div className="result-value">{result.total_subjects.toLocaleString()}</div>
-              <div className="result-unit">subjects</div>
-            </div>
-            <div className="result-item">
-              <div className="result-label">Events Needed</div>
-              <div className="result-value">{result.total_expected_events.toLocaleString()}</div>
-              <div className="result-unit">total events</div>
-            </div>
-            <div className="result-item">
-              <div className="result-label">Hazard Ratio</div>
-              <div className="result-value">{result.hazard_ratio.toFixed(3)}</div>
-            </div>
-          </div>
-
-          <div className="stats-explanation">
-            <div className="stats-card">
-              <div className="stats-card-label">Control Median</div>
-              <div className="stats-card-value">{result.control_median} units</div>
-              <div className="stats-card-explanation">
-                Expected time for 50% of control subjects to experience the event.
-              </div>
-            </div>
-            <div className="stats-card">
-              <div className="stats-card-label">Treatment Median</div>
-              <div className="stats-card-value">{result.treatment_median} units</div>
-              <div className="stats-card-explanation">
-                Expected time for 50% of treatment subjects to experience the event.
-              </div>
-            </div>
-          </div>
-
-          <div className="callout callout-info" style={{ marginTop: '16px' }}>
-            <div className="callout-text">
-              <strong>Interpretation:</strong> You need {result.subjects_per_group.toLocaleString()} subjects per group 
-              ({result.total_subjects.toLocaleString()} total) and approximately {result.total_expected_events.toLocaleString()} events 
-              to detect a hazard ratio of {result.hazard_ratio.toFixed(2)} with {result.power}% power at {result.confidence}% confidence.
-            </div>
-          </div>
-        </div>
       )}
 
       {result && result.type === 'rates' && (

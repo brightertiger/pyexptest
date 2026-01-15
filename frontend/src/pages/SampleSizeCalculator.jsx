@@ -1,7 +1,27 @@
 import { useState } from 'react'
-import TestTypeSelector from '../components/TestTypeSelector'
 import FormField from '../components/FormField'
 import { EffectSizeBar, PowerCurveChart } from '../components/charts'
+
+const TEST_TYPES = {
+  conversion: {
+    id: 'conversion',
+    label: 'Conversion Rate',
+    description: 'Compare rates (click-through, sign-up, purchase)',
+    icon: '🎯',
+  },
+  magnitude: {
+    id: 'magnitude',
+    label: 'Continuous Value',
+    description: 'Compare averages (revenue, time, score)',
+    icon: '📊',
+  },
+  timing: {
+    id: 'timing',
+    label: 'Time-to-Event',
+    description: 'Compare survival times (time to purchase, churn)',
+    icon: '⏱️',
+  },
+}
 
 const CONFIDENCE_OPTIONS = [
   { value: 90, label: '90%', description: 'Lower bar for significance, faster tests, higher false positive risk (10%)' },
@@ -26,6 +46,9 @@ function SampleSizeCalculator() {
     current_mean: 50,
     current_std: 25,
     num_variants: 2,
+    control_median: 30,
+    treatment_median: 24,
+    dropout_rate: 10,
   })
   const [result, setResult] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -45,28 +68,39 @@ function SampleSizeCalculator() {
     setLoading(true)
     setError(null)
     
-    const endpoint = testType === 'conversion' 
-      ? '/api/conversion/sample-size'
-      : '/api/magnitude/sample-size'
-    
-    const payload = testType === 'conversion'
-      ? {
-          current_rate: formData.current_rate,
-          lift_percent: formData.lift_percent,
-          confidence: formData.confidence,
-          power: formData.power,
-          daily_visitors: formData.daily_visitors || null,
-          num_variants: formData.num_variants,
-        }
-      : {
-          current_mean: formData.current_mean,
-          current_std: formData.current_std,
-          lift_percent: formData.lift_percent,
-          confidence: formData.confidence,
-          power: formData.power,
-          daily_visitors: formData.daily_visitors || null,
-          num_variants: formData.num_variants,
-        }
+    let endpoint, payload
+
+    if (testType === 'conversion') {
+      endpoint = '/api/conversion/sample-size'
+      payload = {
+        current_rate: formData.current_rate,
+        lift_percent: formData.lift_percent,
+        confidence: formData.confidence,
+        power: formData.power,
+        daily_visitors: formData.daily_visitors || null,
+        num_variants: formData.num_variants,
+      }
+    } else if (testType === 'magnitude') {
+      endpoint = '/api/magnitude/sample-size'
+      payload = {
+        current_mean: formData.current_mean,
+        current_std: formData.current_std,
+        lift_percent: formData.lift_percent,
+        confidence: formData.confidence,
+        power: formData.power,
+        daily_visitors: formData.daily_visitors || null,
+        num_variants: formData.num_variants,
+      }
+    } else {
+      endpoint = '/api/timing/sample-size'
+      payload = {
+        control_median: formData.control_median,
+        treatment_median: formData.treatment_median,
+        confidence: formData.confidence,
+        power: formData.power,
+        dropout_rate: formData.dropout_rate / 100,
+      }
+    }
     
     try {
       const res = await fetch(endpoint, {
@@ -81,7 +115,7 @@ function SampleSizeCalculator() {
       }
       
       const data = await res.json()
-      setResult(data)
+      setResult({ ...data, type: testType })
     } catch (err) {
       setError(err.message)
     } finally {
@@ -114,101 +148,178 @@ function SampleSizeCalculator() {
 
       <div className="card">
         <div className="card-title">What are you measuring?</div>
-        <TestTypeSelector value={testType} onChange={(val) => { setTestType(val); setResult(null); setError(null); }} />
+        <div className="test-type-options">
+          {Object.values(TEST_TYPES).map((type) => (
+            <button
+              key={type.id}
+              type="button"
+              className={`test-type-option ${testType === type.id ? 'active' : ''}`}
+              onClick={() => { setTestType(type.id); setResult(null); setError(null); }}
+            >
+              <span className="test-type-icon">{type.icon}</span>
+              <div className="test-type-content">
+                <div className="test-type-label">{type.label}</div>
+                <div className="test-type-description">{type.description}</div>
+              </div>
+            </button>
+          ))}
+        </div>
       </div>
 
       <form onSubmit={handleSubmit}>
-        <div className="card">
-          <div className="card-title">Current Performance</div>
-          <div className="form-grid">
-            {testType === 'conversion' ? (
-              <FormField 
-                label="Current Conversion Rate (%)" 
-                hint="Your baseline conversion rate before any changes"
+        {testType === 'timing' ? (
+          <div className="card">
+            <div className="card-title">Expected Median Times</div>
+            <div className="form-grid">
+              <FormField
+                label="Control Group Median Time"
+                hint="Expected median time-to-event for control group"
                 required
               >
                 <input
                   type="number"
-                  name="current_rate"
+                  name="control_median"
                   className="form-input"
-                  value={formData.current_rate}
+                  value={formData.control_median}
                   onChange={handleChange}
                   step="any"
                   min="0.01"
-                  max="99"
-                  placeholder="e.g., 5 for 5%"
                 />
               </FormField>
-            ) : (
-              <>
+              <FormField
+                label="Treatment Group Median Time"
+                hint="Expected median time-to-event for treatment group"
+                required
+              >
+                <input
+                  type="number"
+                  name="treatment_median"
+                  className="form-input"
+                  value={formData.treatment_median}
+                  onChange={handleChange}
+                  step="any"
+                  min="0.01"
+                />
+              </FormField>
+              <FormField
+                label="Expected Dropout Rate (%)"
+                hint="Percentage of subjects expected to drop out before the event"
+              >
+                <input
+                  type="number"
+                  name="dropout_rate"
+                  className="form-input"
+                  value={formData.dropout_rate}
+                  onChange={handleChange}
+                  step="1"
+                  min="0"
+                  max="90"
+                />
+              </FormField>
+            </div>
+            <div style={{ marginTop: '16px', padding: '12px', background: 'var(--bg-secondary)', borderRadius: 'var(--radius)' }}>
+              <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>Expected hazard ratio: </span>
+              <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
+                {(formData.control_median / formData.treatment_median).toFixed(3)}
+              </span>
+              <span style={{ color: 'var(--text-muted)', fontSize: '12px', marginLeft: '8px' }}>
+                ({formData.treatment_median < formData.control_median ? 'faster in treatment' : 'slower in treatment'})
+              </span>
+            </div>
+          </div>
+        ) : (
+          <div className="card">
+            <div className="card-title">Current Performance</div>
+            <div className="form-grid">
+              {testType === 'conversion' ? (
                 <FormField 
-                  label="Current Average Value" 
-                  hint="Average value per visitor (e.g., average order value)"
+                  label="Current Conversion Rate (%)" 
+                  hint="Your baseline conversion rate before any changes"
                   required
                 >
                   <input
                     type="number"
-                    name="current_mean"
+                    name="current_rate"
                     className="form-input"
-                    value={formData.current_mean}
-                    onChange={handleChange}
-                    step="any"
-                    placeholder="e.g., 50"
-                  />
-                </FormField>
-                <FormField 
-                  label="Standard Deviation" 
-                  hint="How spread out your values are. If unsure, use 50-100% of the mean"
-                  required
-                >
-                  <input
-                    type="number"
-                    name="current_std"
-                    className="form-input"
-                    value={formData.current_std}
+                    value={formData.current_rate}
                     onChange={handleChange}
                     step="any"
                     min="0.01"
-                    placeholder="e.g., 25"
+                    max="99"
+                    placeholder="e.g., 5 for 5%"
                   />
                 </FormField>
-              </>
-            )}
+              ) : (
+                <>
+                  <FormField 
+                    label="Current Average Value" 
+                    hint="Average value per visitor (e.g., average order value)"
+                    required
+                  >
+                    <input
+                      type="number"
+                      name="current_mean"
+                      className="form-input"
+                      value={formData.current_mean}
+                      onChange={handleChange}
+                      step="any"
+                      placeholder="e.g., 50"
+                    />
+                  </FormField>
+                  <FormField 
+                    label="Standard Deviation" 
+                    hint="How spread out your values are. If unsure, use 50-100% of the mean"
+                    required
+                  >
+                    <input
+                      type="number"
+                      name="current_std"
+                      className="form-input"
+                      value={formData.current_std}
+                      onChange={handleChange}
+                      step="any"
+                      min="0.01"
+                      placeholder="e.g., 25"
+                    />
+                  </FormField>
+                </>
+              )}
 
-            <FormField 
-              label="Minimum Lift to Detect (%)" 
-              hint="The smallest improvement worth detecting. Smaller lifts need more visitors"
-              required
-            >
-              <input
-                type="number"
-                name="lift_percent"
-                className="form-input"
-                value={formData.lift_percent}
-                onChange={handleChange}
-                step="1"
-                min="1"
-                placeholder="e.g., 10 for 10% improvement"
-              />
-            </FormField>
+              <FormField 
+                label="Minimum Lift to Detect (%)" 
+                hint="The smallest improvement worth detecting. Smaller lifts need more visitors"
+                required
+              >
+                <input
+                  type="number"
+                  name="lift_percent"
+                  className="form-input"
+                  value={formData.lift_percent}
+                  onChange={handleChange}
+                  step="1"
+                  min="1"
+                  placeholder="e.g., 10 for 10% improvement"
+                />
+              </FormField>
 
-            <FormField 
-              label="Daily Visitors (optional)" 
-              hint="Enter to calculate test duration"
-            >
-              <input
-                type="number"
-                name="daily_visitors"
-                className="form-input"
-                value={formData.daily_visitors}
-                onChange={handleChange}
-                step="100"
-                min="1"
-                placeholder="e.g., 10000"
-              />
-            </FormField>
+              <FormField 
+                label="Daily Visitors (optional)" 
+                hint="Enter to calculate test duration"
+              >
+                <input
+                  type="number"
+                  name="daily_visitors"
+                  className="form-input"
+                  value={formData.daily_visitors}
+                  onChange={handleChange}
+                  step="100"
+                  min="1"
+                  placeholder="e.g., 10000"
+                />
+              </FormField>
+            </div>
           </div>
-        </div>
+        )}
 
         <div className="card">
           <div className="card-title">Statistical Settings</div>
@@ -247,37 +358,41 @@ function SampleSizeCalculator() {
             </FormField>
           </div>
 
-          <div className="section-divider">
-            <div className="section-divider-line"></div>
-            <button 
-              type="button" 
-              className="section-divider-text"
-              onClick={() => setShowAdvanced(!showAdvanced)}
-              style={{ background: 'none', border: 'none', cursor: 'pointer' }}
-            >
-              {showAdvanced ? '▼ Hide Advanced' : '▶ Show Advanced'}
-            </button>
-            <div className="section-divider-line"></div>
-          </div>
+          {testType !== 'timing' && (
+            <>
+              <div className="section-divider">
+                <div className="section-divider-line"></div>
+                <button 
+                  type="button" 
+                  className="section-divider-text"
+                  onClick={() => setShowAdvanced(!showAdvanced)}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+                >
+                  {showAdvanced ? '▼ Hide Advanced' : '▶ Show Advanced'}
+                </button>
+                <div className="section-divider-line"></div>
+              </div>
 
-          {showAdvanced && (
-            <FormField 
-              label="Number of Variants" 
-              hint="Including control. More variants = more visitors needed per variant"
-            >
-              <select
-                name="num_variants"
-                className="form-select"
-                value={formData.num_variants}
-                onChange={handleChange}
-                style={{ maxWidth: '200px' }}
-              >
-                <option value={2}>2 (A/B test)</option>
-                <option value={3}>3 (A/B/C test)</option>
-                <option value={4}>4 variants</option>
-                <option value={5}>5 variants</option>
-              </select>
-            </FormField>
+              {showAdvanced && (
+                <FormField 
+                  label="Number of Variants" 
+                  hint="Including control. More variants = more visitors needed per variant"
+                >
+                  <select
+                    name="num_variants"
+                    className="form-select"
+                    value={formData.num_variants}
+                    onChange={handleChange}
+                    style={{ maxWidth: '200px' }}
+                  >
+                    <option value={2}>2 (A/B test)</option>
+                    <option value={3}>3 (A/B/C test)</option>
+                    <option value={4}>4 variants</option>
+                    <option value={5}>5 variants</option>
+                  </select>
+                </FormField>
+              )}
+            </>
           )}
 
           <div style={{ marginTop: '24px' }}>
@@ -292,7 +407,58 @@ function SampleSizeCalculator() {
         <div className="error-message">{error}</div>
       )}
 
-      {result && (
+      {result && result.type === 'timing' && (
+        <div className="results-card">
+          <div className="result-grid">
+            <div className="result-item">
+              <div className="result-label">Per Group</div>
+              <div className="result-value">{result.subjects_per_group.toLocaleString()}</div>
+              <div className="result-unit">subjects</div>
+            </div>
+            <div className="result-item">
+              <div className="result-label">Total</div>
+              <div className="result-value">{result.total_subjects.toLocaleString()}</div>
+              <div className="result-unit">subjects</div>
+            </div>
+            <div className="result-item">
+              <div className="result-label">Events Needed</div>
+              <div className="result-value">{result.total_expected_events.toLocaleString()}</div>
+              <div className="result-unit">total events</div>
+            </div>
+            <div className="result-item">
+              <div className="result-label">Hazard Ratio</div>
+              <div className="result-value">{result.hazard_ratio.toFixed(3)}</div>
+            </div>
+          </div>
+
+          <div className="stats-explanation">
+            <div className="stats-card">
+              <div className="stats-card-label">Control Median</div>
+              <div className="stats-card-value">{result.control_median} units</div>
+              <div className="stats-card-explanation">
+                Expected time for 50% of control subjects to experience the event.
+              </div>
+            </div>
+            <div className="stats-card">
+              <div className="stats-card-label">Treatment Median</div>
+              <div className="stats-card-value">{result.treatment_median} units</div>
+              <div className="stats-card-explanation">
+                Expected time for 50% of treatment subjects to experience the event.
+              </div>
+            </div>
+          </div>
+
+          <div className="callout callout-info" style={{ marginTop: '16px' }}>
+            <div className="callout-text">
+              <strong>Interpretation:</strong> You need {result.subjects_per_group.toLocaleString()} subjects per group 
+              ({result.total_subjects.toLocaleString()} total) and approximately {result.total_expected_events.toLocaleString()} events 
+              to detect a hazard ratio of {result.hazard_ratio.toFixed(2)} with {result.power}% power at {result.confidence}% confidence.
+            </div>
+          </div>
+        </div>
+      )}
+
+      {result && result.type !== 'timing' && (
         <div className="results-card">
           <div className="result-grid">
             <div className="result-item">
@@ -313,9 +479,9 @@ function SampleSizeCalculator() {
               </div>
             )}
             <div className="result-item">
-              <div className="result-label">Expected {testType === 'conversion' ? 'Rate' : 'Value'}</div>
+              <div className="result-label">Expected {result.type === 'conversion' ? 'Rate' : 'Value'}</div>
               <div className="result-value">
-                {testType === 'conversion' 
+                {result.type === 'conversion' 
                   ? `${(result.expected_rate * 100).toFixed(2)}%`
                   : `$${result.expected_mean?.toFixed(2)}`
                 }
@@ -324,25 +490,25 @@ function SampleSizeCalculator() {
           </div>
 
           <EffectSizeBar
-            baseline={testType === 'conversion' ? result.current_rate * 100 : result.current_mean}
+            baseline={result.type === 'conversion' ? result.current_rate * 100 : result.current_mean}
             mde={result.lift_percent}
-            expectedValue={testType === 'conversion' ? result.expected_rate * 100 : result.expected_mean}
-            label={testType === 'conversion' ? 'Conversion Rate' : 'Average Value'}
-            formatValue={(v) => testType === 'conversion' ? `${v.toFixed(2)}%` : `$${v.toFixed(2)}`}
+            expectedValue={result.type === 'conversion' ? result.expected_rate * 100 : result.expected_mean}
+            label={result.type === 'conversion' ? 'Conversion Rate' : 'Average Value'}
+            formatValue={(v) => result.type === 'conversion' ? `${v.toFixed(2)}%` : `$${v.toFixed(2)}`}
           />
 
           <PowerCurveChart
             requiredN={result.visitors_per_variant}
             power={result.power}
             mde={result.lift_percent}
-            baseline={testType === 'conversion' ? result.current_rate : result.current_mean}
+            baseline={result.type === 'conversion' ? result.current_rate : result.current_mean}
           />
 
           <div className="stats-explanation">
             <div className="stats-card">
               <div className="stats-card-label">What you're testing</div>
               <div className="stats-card-value">
-                {testType === 'conversion' 
+                {result.type === 'conversion' 
                   ? `${(result.current_rate * 100).toFixed(1)}% → ${(result.expected_rate * 100).toFixed(1)}%`
                   : `$${result.current_mean?.toFixed(0)} → $${result.expected_mean?.toFixed(0)}`
                 }
